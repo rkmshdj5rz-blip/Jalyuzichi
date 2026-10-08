@@ -14,7 +14,7 @@ Kirish ketma-ketligi:
 6. Manzil kiritish (viloyat, tuman, xaritadan belgilash)
 7. Bosh sahifa: bannerlar, xizmatlar bo'limlari, yon menyu, tungi rejim
 
-Logo vaqtinchalik (`lib/widgets/app_logo.dart`), ranglar `lib/theme.dart` da.
+Logo `lib/widgets/app_logo.dart` da, ranglar `lib/theme.dart` da.
 
 ## Ishga tushirish
 
@@ -34,4 +34,3 @@ Testlar: `flutter test`.
   dagi `MockAuthService` server bilan ishlaydigan xizmatga almashtiriladi.
 - Haqiqiy xarita (Google yoki Yandex)
 - Buyurtmalar, narxlar, dilerlar va omborxona bo'limlari
-- Yakuniy logo va dizayn
