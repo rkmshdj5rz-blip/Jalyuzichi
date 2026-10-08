@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jalyuzichi/app_state.dart';
 import 'package:jalyuzichi/main.dart';
 import 'package:jalyuzichi/screens/home_screen.dart';
-import 'package:jalyuzichi/screens/otp_screen.dart';
+import 'package:jalyuzichi/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -25,13 +25,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tasdiqlash'), findsOneWidget);
+    expect(find.textContaining('Verification Codes'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '11111');
     await tester.pump();
     await tester.tap(find.text('Davom etish'));
     await tester.pumpAndSettle(const Duration(seconds: 1));
     expect(find.textContaining("Kod noto'g'ri"), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), demoSmsCode);
+    await tester.tap(find.text("Telegram yo'qmi? SMS orqali olish"));
+    await tester.pump();
+    expect(find.textContaining('SMS kodni kiriting'), findsOneWidget);
+    expect(find.text('Telegram orqali olish'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), MockAuthService.demoCode);
     await tester.pump();
     await tester.tap(find.text('Davom etish'));
     await tester.pumpAndSettle(const Duration(seconds: 1));

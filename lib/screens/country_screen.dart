@@ -101,7 +101,9 @@ class _CountryTile extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: selected ? AppColors.primary : Colors.transparent,
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
           width: 1.5,
         ),
       ),
@@ -114,7 +116,9 @@ class _CountryTile extends StatelessWidget {
         subtitle: Text(country.code),
         trailing: Icon(
           selected ? Icons.radio_button_checked : Icons.radio_button_off,
-          color: selected ? AppColors.primary : AppColors.lightMuted,
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : AppColors.lightMuted,
         ),
       ),
     );

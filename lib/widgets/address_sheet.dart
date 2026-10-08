@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../data/regions.dart';
 import '../screens/map_screen.dart';
-import '../theme.dart';
 
 /// "Manzil kiritish" oynasini ochadi.
 Future<void> showAddressSheet(BuildContext context) {
@@ -107,8 +106,8 @@ class _AddressSheetState extends State<_AddressSheet> {
             onPressed: _openMap,
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary),
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(color: Theme.of(context).colorScheme.primary),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),

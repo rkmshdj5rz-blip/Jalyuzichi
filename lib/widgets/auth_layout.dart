@@ -74,7 +74,7 @@ class AuthLayout extends StatelessWidget {
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              color: Colors.white,
+                              color: AppColors.onBrand,
                             ),
                           )
                         : Text(buttonText),
@@ -104,15 +104,15 @@ class SupportTile extends StatelessWidget {
         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Qo'llab-quvvatlash: +998 71 200 00 00")),
         ),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: Color(0x1A6A35FF),
+                backgroundColor: AppColors.brand.withValues(alpha: 0.18),
                 child: Icon(Icons.headset_mic_rounded,
-                    color: AppColors.primary, size: 20),
+                    color: Theme.of(context).colorScheme.primary, size: 20),
               ),
               SizedBox(width: 12),
               Expanded(

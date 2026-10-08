@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
-        indicatorColor: AppColors.primary.withValues(alpha: 0.14),
+        indicatorColor: AppColors.brand.withValues(alpha: 0.25),
         destinations: [
           for (final t in _tabs)
             NavigationDestination(icon: Icon(t.$1), label: t.$2),
@@ -138,8 +138,8 @@ class _AddressChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            const Icon(Icons.location_on_outlined,
-                size: 20, color: AppColors.primary),
+            Icon(Icons.location_on_outlined,
+                size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 6),
             Flexible(
               child: Text(text,
@@ -155,17 +155,20 @@ class _AddressChip extends StatelessWidget {
 }
 
 class _Banner {
-  const _Banner(this.title, this.subtitle, this.icon, this.colors);
+  const _Banner(this.title, this.subtitle, this.icon, this.colors,
+      [this.fg = Colors.white]);
 
   final String title;
   final String subtitle;
   final IconData icon;
   final List<Color> colors;
+  final Color fg;
 }
 
 const _banners = [
   _Banner('Barcha turdagi jalyuzilar', "Vertikal, gorizontal va rulonli",
-      Icons.blinds_rounded, [Color(0xFF7B4DFF), Color(0xFF4E1FE0)]),
+      Icons.blinds_rounded, [AppColors.brandLight, AppColors.brandDark],
+      AppColors.onBrand),
   _Banner('Bepul o\'lchov xizmati', 'Usta uyingizga o\'zi keladi',
       Icons.straighten_rounded, [Color(0xFFFF8A3D), Color(0xFFFF4D6D)]),
   _Banner('Rulonli pardalarga -20%', 'Faqat shu oy davomida',
@@ -230,20 +233,20 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(b.title,
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: b.fg,
                                   fontSize: 21,
                                   height: 1.15,
                                   fontWeight: FontWeight.w800)),
                           const SizedBox(height: 8),
                           Text(b.subtitle,
                               style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9))),
+                                  color: b.fg.withValues(alpha: 0.9))),
                         ],
                       ),
                     ),
                     Icon(b.icon,
-                        size: 84, color: Colors.white.withValues(alpha: 0.9)),
+                        size: 84, color: b.fg.withValues(alpha: 0.9)),
                   ],
                 ),
               );
@@ -262,7 +265,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 height: 6,
                 decoration: BoxDecoration(
                   color: i == _page
-                      ? AppColors.primary
+                      ? AppColors.brand
                       : AppColors.lightMuted.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(3),
                 ),

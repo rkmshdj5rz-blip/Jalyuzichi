@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app_state.dart';
 import '../data/countries.dart';
+import '../services/auth_service.dart';
 import '../widgets/auth_layout.dart';
 import 'otp_screen.dart';
 
@@ -38,12 +39,13 @@ class _PhoneScreenState extends State<PhoneScreen> {
     setState(() => _loading = true);
     final phone = '${widget.country.code}$_digits';
     await AppScope.read(context).setPhone(phone);
-    // SMS yuborish hozircha sinov rejimida.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    await authService.sendCode(phone, CodeChannel.telegram);
     if (!mounted) return;
     setState(() => _loading = false);
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => OtpScreen(phone: phone)),
+      MaterialPageRoute(
+        builder: (_) => OtpScreen(phone: phone, channel: CodeChannel.telegram),
+      ),
     );
   }
 
@@ -51,7 +53,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
   Widget build(BuildContext context) {
     return AuthLayout(
       title: 'Xush kelibsiz',
-      subtitle: 'Telefon raqamingizni kiriting, unga SMS kod yuboramiz',
+      subtitle: "Telefon raqamingizni kiriting, tasdiqlash kodini Telegram'ingizga yuboramiz",
       buttonText: 'Davom etish',
       loading: _loading,
       onPressed: _valid ? _continue : null,

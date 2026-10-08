@@ -21,7 +21,7 @@ class MapScreen extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(bottom: 40),
               child: Icon(Icons.location_on_rounded,
-                  size: 52, color: AppColors.primary),
+                  size: 52, color: AppColors.brandDark),
             ),
           ),
           Positioned(

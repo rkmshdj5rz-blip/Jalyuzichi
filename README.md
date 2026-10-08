@@ -8,7 +8,7 @@ Kirish ketma-ketligi:
 
 1. Davlatni tanlash
 2. Telefon raqam kiritish
-3. SMS kod bilan tasdiqlash (hozircha sinov rejimi, kod `12345`)
+3. Kod bilan tasdiqlash: kod Telegram'ga yuboriladi, xohlasa SMS orqali olsa ham bo'ladi (hozircha sinov rejimi, kod `12345`)
 4. Ro'yxatdan o'tish (ism)
 5. Sinxronlash (ma'lumotlarni yuklash)
 6. Manzil kiritish (viloyat, tuman, xaritadan belgilash)
@@ -27,7 +27,11 @@ Testlar: `flutter test`.
 
 ## Keyingi qadamlar
 
-- Haqiqiy SMS xizmati va server (backend)
+- Server (backend): kodni Telegram Gateway API orqali yuborish
+  (`sendVerificationMessage`, `checkVerificationStatus`, gateway.telegram.org)
+  va zaxira sifatida SMS xizmati (masalan Eskiz yoki Play Mobile).
+  Gateway kaliti faqat serverda turadi; ilovada `lib/services/auth_service.dart`
+  dagi `MockAuthService` server bilan ishlaydigan xizmatga almashtiriladi.
 - Haqiqiy xarita (Google yoki Yandex)
 - Buyurtmalar, narxlar, dilerlar va omborxona bo'limlari
 - Yakuniy logo va dizayn
