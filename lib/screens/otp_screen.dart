@@ -3,18 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/auth_service.dart';
 import '../theme.dart';
 import '../widgets/auth_layout.dart';
 import 'register_screen.dart';
 
-/// Sinov rejimidagi SMS kod. Server ulangach olib tashlanadi.
-const demoSmsCode = '12345';
 const _codeLength = 5;
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.phone});
+  const OtpScreen({super.key, required this.phone, required this.channel});
 
   final String phone;
+
+  /// Kod birinchi marta qaysi yo'l bilan yuborilgan.
+  final CodeChannel channel;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -27,6 +29,7 @@ class _OtpScreenState extends State<OtpScreen> {
   int _seconds = 60;
   String? _error;
   bool _loading = false;
+  late CodeChannel _channel = widget.channel;
 
   @override
   void initState() {
@@ -52,11 +55,19 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
+  /// Kodni qayta yuboradi, kerak bo'lsa boshqa yo'l bilan.
+  Future<void> _resend(CodeChannel channel) async {
+    _controller.clear();
+    setState(() => _channel = channel);
+    _startTimer();
+    await authService.sendCode(widget.phone, channel);
+  }
+
   Future<void> _confirm() async {
     setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final ok = await authService.verifyCode(widget.phone, _controller.text);
     if (!mounted) return;
-    if (_controller.text != demoSmsCode) {
+    if (!ok) {
       setState(() {
         _loading = false;
         _error = "Kod noto'g'ri. Qaytadan urinib ko'ring";
@@ -77,7 +88,10 @@ class _OtpScreenState extends State<OtpScreen> {
 
     return AuthLayout(
       title: 'Tasdiqlash',
-      subtitle: '${widget.phone} raqamiga yuborilgan SMS kodni kiriting',
+      subtitle: _channel == CodeChannel.telegram
+          ? "Kodni ${widget.phone} raqamiga ulangan Telegram'ga yubordik. "
+              "Telegram'dagi \"Verification Codes\" chatini oching"
+          : '${widget.phone} raqamiga yuborilgan SMS kodni kiriting',
       buttonText: 'Davom etish',
       loading: _loading,
       onPressed: code.length == _codeLength ? _confirm : null,
@@ -132,9 +146,23 @@ class _OtpScreenState extends State<OtpScreen> {
                   style: const TextStyle(color: AppColors.lightMuted),
                 )
               : TextButton.icon(
-                  onPressed: _startTimer,
+                  onPressed: () => _resend(_channel),
                   icon: const Icon(Icons.refresh_rounded),
                   label: const Text('Kodni qayta yuborish'),
+                ),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: _channel == CodeChannel.telegram
+              ? TextButton.icon(
+                  onPressed: () => _resend(CodeChannel.sms),
+                  icon: const Icon(Icons.sms_outlined),
+                  label: const Text("Telegram yo'qmi? SMS orqali olish"),
+                )
+              : TextButton.icon(
+                  onPressed: () => _resend(CodeChannel.telegram),
+                  icon: const Icon(Icons.telegram),
+                  label: const Text('Telegram orqali olish'),
                 ),
         ),
         const SizedBox(height: 16),
@@ -145,7 +173,7 @@ class _OtpScreenState extends State<OtpScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            'Sinov rejimi: SMS hali ulanmagan, kod $demoSmsCode',
+            'Sinov rejimi: kod hali yuborilmaydi, kod ${MockAuthService.demoCode}',
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.primary),
           ),
