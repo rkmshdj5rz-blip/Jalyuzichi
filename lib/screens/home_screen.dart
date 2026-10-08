@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets/address_sheet.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/side_menu.dart';
+import 'orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -101,6 +102,12 @@ class _HomeBody extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const _BannerCarousel(),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () => openNewOrder(context),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Buyurtma'),
+        ),
         const SizedBox(height: 24),
         const Text('Xizmatlar',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
@@ -233,6 +240,8 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(b.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   color: b.fg,
                                   fontSize: 21,
@@ -240,6 +249,8 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                                   fontWeight: FontWeight.w800)),
                           const SizedBox(height: 8),
                           Text(b.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   color: b.fg.withValues(alpha: 0.9))),
                         ],
@@ -306,7 +317,12 @@ class _CategoryTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () => _soon(context, category.title),
+        onTap: () => switch (category.title) {
+          'Buyurtmalar' => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const OrdersScreen())),
+          'Yangi buyurtma' => openNewOrder(context),
+          _ => _soon(context, category.title),
+        },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -323,7 +339,7 @@ class _CategoryTile extends StatelessWidget {
               ),
               const Spacer(),
               Text(category.title,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontWeight: FontWeight.w700, fontSize: 15)),

@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'data/orders.dart';
 
 /// Foydalanuvchi ma'lumotlari. Hozircha telefonning o'zida saqlanadi,
 /// keyinchalik server bilan almashtiriladi.
@@ -42,6 +46,26 @@ class AppState extends ChangeNotifier {
   Future<void> setAddress(String region, String district) async {
     await _prefs.setString('region', region);
     await _prefs.setString('district', district);
+    notifyListeners();
+  }
+
+  /// Telefonda saqlangan buyurtmalar, eng yangisi birinchi.
+  List<Order> get orders {
+    final raw = _prefs.getStringList('orders') ?? const [];
+    return [
+      for (final o in raw.reversed)
+        Order.fromJson(jsonDecode(o) as Map<String, dynamic>),
+    ];
+  }
+
+  /// Keyingi buyurtma raqami.
+  int get nextOrderNumber => _prefs.getInt('nextOrderNumber') ?? 1001;
+
+  Future<void> addOrder(Order order) async {
+    final raw = _prefs.getStringList('orders') ?? <String>[];
+    await _prefs.setStringList(
+        'orders', [...raw, jsonEncode(order.toJson())]);
+    await _prefs.setInt('nextOrderNumber', order.number + 1);
     notifyListeners();
   }
 

@@ -13,6 +13,7 @@ Kirish ketma-ketligi:
 5. Sinxronlash (ma'lumotlarni yuklash)
 6. Manzil kiritish (viloyat, tuman, xaritadan belgilash)
 7. Bosh sahifa: bannerlar, xizmatlar bo'limlari, yon menyu, tungi rejim
+8. Buyurtmalar: ro'yxat va "+ Buyurtma" (filial, buyurtmachi, mahsulot va o'lchamlar, m² hisobi, matndan o'lcham qo'shish, mijoz va o'rnatish ma'lumotlari). Hozircha telefonning o'zida saqlanadi.
 
 Logo `lib/widgets/app_logo.dart` da, ranglar `lib/theme.dart` da.
 
@@ -33,4 +34,4 @@ Testlar: `flutter test`.
   Gateway kaliti faqat serverda turadi; ilovada `lib/services/auth_service.dart`
   dagi `MockAuthService` server bilan ishlaydigan xizmatga almashtiriladi.
 - Haqiqiy xarita (Google yoki Yandex)
-- Buyurtmalar, narxlar, dilerlar va omborxona bo'limlari
+- Buyurtmalarni serverda saqlash, narxlar, dilerlar va omborxona bo'limlari
