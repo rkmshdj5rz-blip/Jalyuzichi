@@ -141,13 +141,13 @@ class _OtpScreenState extends State<OtpScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: AppColors.brand.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Text(
+          child: Text(
             'Sinov rejimi: SMS hali ulanmagan, kod $demoSmsCode',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.primary),
+            style: TextStyle(color: Theme.of(context).colorScheme.primary),
           ),
         ),
       ],
@@ -168,7 +168,7 @@ class _CodeBox extends StatelessWidget {
     final border = error
         ? Colors.redAccent
         : active
-            ? AppColors.primary
+            ? Theme.of(context).colorScheme.primary
             : Colors.transparent;
     return Container(
       width: 54,

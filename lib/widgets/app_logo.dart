@@ -19,17 +19,18 @@ class AppLogo extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF8B5CFF), AppColors.primaryDark],
+          colors: [AppColors.brandLight, AppColors.brandDark],
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
+            color: AppColors.brand.withValues(alpha: 0.3),
             blurRadius: size * 0.3,
             offset: Offset(0, size * 0.1),
           ),
         ],
       ),
-      child: Icon(Icons.blinds_rounded, color: Colors.white, size: size * 0.55),
+      child: Icon(Icons.blinds_rounded,
+          color: AppColors.onBrand, size: size * 0.55),
     );
     if (!showName) return mark;
     return Column(

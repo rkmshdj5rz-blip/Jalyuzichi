@@ -26,8 +26,8 @@ class SideMenu extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         child: ListTile(
           selected: selected,
-          selectedTileColor: AppColors.primary,
-          selectedColor: Colors.white,
+          selectedTileColor: AppColors.brand,
+          selectedColor: AppColors.onBrand,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           leading: Icon(icon),

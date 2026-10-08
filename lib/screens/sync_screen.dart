@@ -129,8 +129,8 @@ class _SyncScreenState extends State<SyncScreen> {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 8,
-                  color: AppColors.primary,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.brand,
+                  backgroundColor: AppColors.brand.withValues(alpha: 0.12),
                 ),
               ),
             ],
