@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/orders.dart';
+import 'data/sample_orders.dart';
 
 /// Foydalanuvchi ma'lumotlari. Hozircha telefonning o'zida saqlanadi,
 /// keyinchalik server bilan almashtiriladi.
@@ -58,6 +59,71 @@ class AppState extends ChangeNotifier {
     ];
   }
 
+  /// Buyurtmani yangilaydi (to'lov qo'shish, o'rnatildi deb belgilash).
+  Future<void> updateOrder(Order order) async {
+    final raw = _prefs.getStringList('orders') ?? <String>[];
+    final updated = [
+      for (final o in raw)
+        (jsonDecode(o) as Map<String, dynamic>)['number'] == order.number
+            ? jsonEncode(order.toJson())
+            : o,
+    ];
+    await _prefs.setStringList('orders', updated);
+    notifyListeners();
+  }
+
+  /// Bir nechta buyurtmani birdaniga qo'shadi (namuna ma'lumotlar uchun).
+  Future<void> addOrders(List<Order> orders) async {
+    final raw = _prefs.getStringList('orders') ?? <String>[];
+    await _prefs.setStringList(
+        'orders', [...raw, for (final o in orders) jsonEncode(o.toJson())]);
+    await _prefs.setInt('nextOrderNumber', orders.last.number + 1);
+    notifyListeners();
+  }
+
+  /// Buyurtmani o'chiradi.
+  Future<void> deleteOrder(int number) async {
+    final raw = _prefs.getStringList('orders') ?? <String>[];
+    await _prefs.setStringList('orders', [
+      for (final o in raw)
+        if ((jsonDecode(o) as Map<String, dynamic>)['number'] != number) o,
+    ]);
+    notifyListeners();
+  }
+
+  bool get hasSamples => orders.any((o) => o.customerName.startsWith(samplePrefix));
+
+  /// Namuna buyurtmalarni o'chiradi (haqiqiy buyurtmalar qoladi).
+  Future<void> removeSamples() async {
+    final raw = _prefs.getStringList('orders') ?? <String>[];
+    await _prefs.setStringList('orders', [
+      for (final o in raw)
+        if (!((jsonDecode(o) as Map<String, dynamic>)['customerName'] as String? ?? '')
+            .startsWith(samplePrefix))
+          o,
+    ]);
+    notifyListeners();
+  }
+
+  /// 1 m² narxlari (mahsulot turi bo'yicha).
+  Map<String, double> get prices {
+    final raw = _prefs.getString('prices');
+    final saved = raw == null
+        ? const <String, dynamic>{}
+        : jsonDecode(raw) as Map<String, dynamic>;
+    return {
+      for (final t in productTypes)
+        t: (saved[t] as num?)?.toDouble() ?? defaultPrices[t] ?? 0,
+    };
+  }
+
+  double priceFor(String type) => prices[type] ?? 0;
+
+  Future<void> setPrice(String type, double price) async {
+    await _prefs.setString('prices', jsonEncode({...prices, type: price}));
+    notifyListeners();
+  }
+
   /// Keyingi buyurtma raqami.
   int get nextOrderNumber => _prefs.getInt('nextOrderNumber') ?? 1001;
 
@@ -74,10 +140,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Hisobdan chiqish. Buyurtmalar, narxlar va tungi rejim telefonda qoladi,
+  /// faqat shaxsiy ma'lumotlar o'chiriladi.
   Future<void> logout() async {
-    final dark = _prefs.getBool('dark');
-    await _prefs.clear();
-    if (dark != null) await _prefs.setBool('dark', dark);
+    for (final k in ['phone', 'name', 'region', 'district', 'loggedIn']) {
+      await _prefs.remove(k);
+    }
     notifyListeners();
   }
 }

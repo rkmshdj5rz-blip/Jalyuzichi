@@ -7,7 +7,10 @@ import '../theme.dart';
 import '../widgets/address_sheet.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/side_menu.dart';
+import '../data/orders.dart';
+import 'cabinet_screen.dart';
 import 'orders_screen.dart';
+import 'prices_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,8 +19,18 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// Bosh ekrandan boshqa bo'limni ochish uchun.
+typedef OpenOrders = void Function(
+    {OrderFilter filter, OrdersSection section, bool search});
+
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
+
+  // Buyurtmalar bo'limi qaysi filtr bilan ochilishi.
+  int _ordersVersion = 0;
+  OrderFilter _filter = OrderFilter.all;
+  OrdersSection _section = OrdersSection.orders;
+  bool _search = false;
 
   @override
   void initState() {
@@ -30,37 +43,70 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _openOrders({
+    OrderFilter filter = OrderFilter.all,
+    OrdersSection section = OrdersSection.orders,
+    bool search = false,
+  }) {
+    setState(() {
+      _filter = filter;
+      _section = section;
+      _search = search;
+      _ordersVersion++;
+      _tab = 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     return Scaffold(
-      drawer: const SideMenu(),
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: const Row(
-          children: [
-            AppLogo(size: 30, showName: false),
-            SizedBox(width: 10),
-            Text('Jalyuzichi'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () => _soon(context, 'Bildirishnomalar'),
-            icon: const Icon(Icons.notifications_none_rounded),
+      drawer: _tab == 0
+          ? SideMenu(
+              onTab: (i) => setState(() => _tab = i),
+              onOrders: _openOrders,
+            )
+          : null,
+      appBar: _tab == 0
+          ? AppBar(
+              titleSpacing: 0,
+              title: const Row(
+                children: [
+                  AppLogo(size: 30, showName: false),
+                  SizedBox(width: 10),
+                  Text('Jalyuzichi'),
+                ],
+              ),
+              actions: [_Bell(state: state)],
+            )
+          : null,
+      body: switch (_tab) {
+        0 => _HomeBody(state: state, openOrders: _openOrders,
+            openTab: (i) => setState(() => _tab = i)),
+        1 => OrdersScreen(
+            key: ValueKey(_ordersVersion),
+            initialFilter: _filter,
+            initialSection: _section,
+            focusSearch: _search,
           ),
-        ],
-      ),
-      body: _tab == 0
-          ? _HomeBody(state: state)
-          : _Placeholder(title: _tabs[_tab].$2),
+        2 => const PricesScreen(),
+        _ => CabinetScreen(onOpenOrders: () => _openOrders()),
+      },
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        indicatorColor: AppColors.brand.withValues(alpha: 0.25),
+        onDestinationSelected: (i) => setState(() {
+          if (i == 1 && _tab != 1) {
+            _filter = OrderFilter.all;
+            _section = OrdersSection.orders;
+            _search = false;
+          }
+          _tab = i;
+        }),
+        indicatorColor: AppColors.brand.withValues(alpha: 0.6),
         destinations: [
           for (final t in _tabs)
-            NavigationDestination(icon: Icon(t.$1), label: t.$2),
+            NavigationDestination(
+                icon: Icon(t.$1), selectedIcon: Icon(t.$2), label: t.$3),
         ],
       ),
     );
@@ -68,10 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 const _tabs = [
-  (Icons.home_rounded, 'Bosh sahifa'),
-  (Icons.grid_view_rounded, 'Katalog'),
-  (Icons.shopping_bag_outlined, 'Savat'),
-  (Icons.person_outline_rounded, 'Kabinet'),
+  (Icons.home_outlined, Icons.home_rounded, 'Bosh sahifa'),
+  (Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Buyurtmalar'),
+  (Icons.sell_outlined, Icons.sell_rounded, 'Narxlar'),
+  (Icons.person_outline_rounded, Icons.person_rounded, 'Kabinet'),
 ];
 
 void _soon(BuildContext context, String what) {
@@ -80,13 +126,164 @@ void _soon(BuildContext context, String what) {
   );
 }
 
-class _HomeBody extends StatelessWidget {
-  const _HomeBody({required this.state});
+/// Muddati o'tgan, bugungi va ertangi montajlar.
+List<Order> _reminders(List<Order> orders, DateTime now) => sortOrders(
+      [
+        for (final o in orders)
+          if (!o.isInstalled && (o.daysToInstall(now) ?? 99) <= 1) o,
+      ],
+      OrderSort.install,
+      now,
+    );
+
+class _Bell extends StatelessWidget {
+  const _Bell({required this.state});
 
   final AppState state;
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final list = _reminders(state.orders, now);
+    final urgent = list.where((o) => (o.daysToInstall(now) ?? 1) <= 0).length;
+    return IconButton(
+      tooltip: 'Eslatmalar',
+      onPressed: () => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        builder: (c) => _RemindersSheet(orders: list),
+      ),
+      icon: Badge(
+        isLabelVisible: urgent > 0,
+        label: Text('$urgent'),
+        child: const Icon(Icons.notifications_none_rounded),
+      ),
+    );
+  }
+}
+
+class _RemindersSheet extends StatelessWidget {
+  const _RemindersSheet({required this.orders});
+
+  final List<Order> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    return ConstrainedBox(
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Eslatmalar',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            ),
+            if (orders.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 32),
+                child: Text(
+                    "Bugun va ertaga montaj yo'q, muddati o'tgan buyurtma ham yo'q.",
+                    style: TextStyle(color: AppColors.lightMuted)),
+              )
+            else
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+                  children: [
+                    for (final o in orders)
+                      _MontajRow(
+                        order: o,
+                        now: now,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          openOrder(context, o);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Montaj ro'yxatidagi ixcham qator.
+class _MontajRow extends StatelessWidget {
+  const _MontajRow({required this.order, required this.now, this.onTap});
+
+  final Order order;
+  final DateTime now;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = order.daysToInstall(now)!;
+    final (text, color) = d < 0
+        ? ('${-d} kun kechikdi', const Color(0xFFE5484D))
+        : d == 0
+            ? ('Bugun', const Color(0xFFE38B00))
+            : d == 1
+                ? ('Ertaga', const Color(0xFF3B6FE0))
+                : (formatDay(order.installDate!), AppColors.lightMuted);
+    return ListTile(
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      leading: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(Icons.handyman_outlined, color: color, size: 22),
+      ),
+      title: Text('№ ${order.number} · ${order.customerLabel}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text(
+          order.address.isEmpty ? order.branch : order.address,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis),
+      trailing: Text(text,
+          style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+    );
+  }
+}
+
+class _HomeBody extends StatelessWidget {
+  const _HomeBody(
+      {required this.state, required this.openOrders, required this.openTab});
+
+  final AppState state;
+  final OpenOrders openOrders;
+  final ValueChanged<int> openTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final orders = state.orders;
+    final upcoming = sortOrders(
+      [
+        for (final o in orders)
+          if (!o.isInstalled && o.installDate != null) o,
+      ],
+      OrderSort.install,
+      now,
+    ).take(3).toList();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
@@ -94,22 +291,28 @@ class _HomeBody extends StatelessWidget {
         const SizedBox(height: 12),
         TextField(
           readOnly: true,
-          onTap: () => _soon(context, 'Qidiruv'),
+          onTap: () => openOrders(search: true),
           decoration: const InputDecoration(
-            hintText: 'Mahsulot yoki xizmat qidirish',
+            hintText: 'Buyurtma qidirish: mijoz, telefon, №',
             prefixIcon: Icon(Icons.search_rounded),
           ),
         ),
         const SizedBox(height: 16),
         const _BannerCarousel(),
         const SizedBox(height: 16),
+        _TodayCard(
+          stats: OrderStats(orders, now),
+          empty: orders.isEmpty,
+          openOrders: openOrders,
+        ),
+        const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: () => openNewOrder(context),
           icon: const Icon(Icons.add_rounded),
-          label: const Text('Buyurtma'),
+          label: const Text('Yangi buyurtma'),
         ),
         const SizedBox(height: 24),
-        const Text('Xizmatlar',
+        const Text("Bo'limlar",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
         GridView.count(
@@ -120,10 +323,189 @@ class _HomeBody extends StatelessWidget {
           crossAxisSpacing: 12,
           childAspectRatio: 1.4,
           children: [
-            for (final c in _categories) _CategoryTile(category: c),
+            _CategoryTile(
+              title: 'Buyurtmalar',
+              icon: Icons.receipt_long_rounded,
+              color: const Color(0xFF6A35FF),
+              badge: orders.isEmpty ? null : '${orders.length}',
+              onTap: () => openOrders(),
+            ),
+            _CategoryTile(
+              title: 'Kassa jurnali',
+              icon: Icons.account_balance_wallet_rounded,
+              color: const Color(0xFF00A86B),
+              onTap: () => openOrders(section: OrdersSection.cash),
+            ),
+            _CategoryTile(
+              title: 'Mahsulot narxlari',
+              icon: Icons.sell_rounded,
+              color: const Color(0xFFFF7A00),
+              onTap: () => openTab(2),
+            ),
+            _CategoryTile(
+              title: 'Tsexdan yuklar',
+              icon: Icons.local_shipping_rounded,
+              color: const Color(0xFF1E88E5),
+              onTap: () => openOrders(section: OrdersSection.workshop),
+            ),
+            _CategoryTile(
+              title: "Dilerlar va do'konlar",
+              icon: Icons.storefront_rounded,
+              color: const Color(0xFFE91E63),
+              onTap: () => _soon(context, "Dilerlar va do'konlar"),
+            ),
+            _CategoryTile(
+              title: 'Omborxona',
+              icon: Icons.warehouse_rounded,
+              color: const Color(0xFF795548),
+              onTap: () => _soon(context, 'Omborxona'),
+            ),
           ],
         ),
+        if (upcoming.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Yaqin montajlar',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              ),
+              TextButton(
+                onPressed: () => openOrders(filter: OrderFilter.waiting),
+                child: const Text('Hammasi'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                children: [
+                  for (final o in upcoming)
+                    _MontajRow(
+                        order: o, now: now, onTap: () => openOrder(context, o)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// Bugungi ish: montajlar va qarzlar.
+class _TodayCard extends StatelessWidget {
+  const _TodayCard(
+      {required this.stats, required this.empty, required this.openOrders});
+
+  final OrderStats stats;
+  final bool empty;
+  final OpenOrders openOrders;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final bg = dark ? const Color(0xFF23252E) : AppColors.onBrand;
+    const fg = Colors.white;
+    Widget cell(String label, int value, OrderFilter f, {bool alert = false}) {
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => openOrders(filter: f),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$value',
+                    style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: alert && value > 0
+                            ? const Color(0xFFFF6B6F)
+                            : AppColors.brand)),
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 13, color: fg.withValues(alpha: 0.7))),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
+              children: [
+                const Text('Montaj',
+                    style: TextStyle(
+                        color: fg, fontSize: 17, fontWeight: FontWeight.w800)),
+                const Spacer(),
+                Text(formatDay(DateTime.now()),
+                    style: TextStyle(color: fg.withValues(alpha: 0.6))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (empty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+              child: Text(
+                  "Buyurtma kiritilgach, bu yerda bugungi va ertangi montajlar ko'rinadi.",
+                  style: TextStyle(color: fg.withValues(alpha: 0.7))),
+            )
+          else ...[
+            Row(
+              children: [
+                cell('Bugun', stats.installToday, OrderFilter.today),
+                cell('Ertaga', stats.installTomorrow, OrderFilter.tomorrow),
+                cell("Kechikkan", stats.overdue, OrderFilter.overdue,
+                    alert: true),
+              ],
+            ),
+            if (stats.debt > 0) ...[
+              Divider(color: fg.withValues(alpha: 0.12), height: 16),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => openOrders(filter: OrderFilter.debtor),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 18, color: Color(0xFFFF6B6F)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                            'Qarzlar: ${formatMoney(stats.debt)} · ${stats.debtCount} ta',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: fg, fontWeight: FontWeight.w600)),
+                      ),
+                      Icon(Icons.chevron_right_rounded,
+                          color: fg.withValues(alpha: 0.6)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 }
@@ -288,27 +670,20 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   }
 }
 
-class _Category {
-  const _Category(this.title, this.icon, this.color);
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.badge,
+  });
 
   final String title;
   final IconData icon;
   final Color color;
-}
-
-const _categories = [
-  _Category('Buyurtmalar', Icons.receipt_long_rounded, Color(0xFF6A35FF)),
-  _Category('Mahsulot narxlari', Icons.sell_rounded, Color(0xFFFF7A00)),
-  _Category("Dilerlar va do'konlar", Icons.storefront_rounded, Color(0xFF00A86B)),
-  _Category('Yangi buyurtma', Icons.add_box_rounded, Color(0xFF1E88E5)),
-  _Category('Savat', Icons.shopping_cart_rounded, Color(0xFFE91E63)),
-  _Category('Omborxona', Icons.warehouse_rounded, Color(0xFF795548)),
-];
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.category});
-
-  final _Category category;
+  final VoidCallback onTap;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -317,28 +692,43 @@ class _CategoryTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () => switch (category.title) {
-          'Buyurtmalar' => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const OrdersScreen())),
-          'Yangi buyurtma' => openNewOrder(context),
-          _ => _soon(context, category.title),
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: category.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(category.icon, color: category.color, size: 26),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(icon, color: color, size: 26),
+                  ),
+                  const Spacer(),
+                  if (badge != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.brand,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(badge!,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.onBrand)),
+                    ),
+                ],
               ),
               const Spacer(),
-              Text(category.title,
+              Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -346,31 +736,6 @@ class _CategoryTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.construction_rounded,
-              size: 56, color: AppColors.lightMuted),
-          const SizedBox(height: 12),
-          Text(title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          const Text("Bu bo'lim tez orada qo'shiladi",
-              style: TextStyle(color: AppColors.lightMuted)),
-        ],
       ),
     );
   }

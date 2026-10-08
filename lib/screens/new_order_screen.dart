@@ -4,11 +4,15 @@ import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../data/orders.dart';
 import '../theme.dart';
+import '../widgets/money_field.dart';
 
 /// Yangi buyurtma kiritish: 1-qadam mahsulot va o'lchamlar,
-/// 2-qadam mijoz va o'rnatish ma'lumotlari.
+/// 2-qadam mijoz, o'rnatish va to'lov ma'lumotlari.
+/// [editing] berilsa, mavjud buyurtma tahrirlanadi.
 class NewOrderScreen extends StatefulWidget {
-  const NewOrderScreen({super.key});
+  const NewOrderScreen({super.key, this.editing});
+
+  final Order? editing;
 
   @override
   State<NewOrderScreen> createState() => _NewOrderScreenState();
@@ -24,12 +28,31 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   final _phone = TextEditingController();
   final _address = TextEditingController();
   final _note = TextEditingController();
+  final _discount = TextEditingController();
+  final _prepay = TextEditingController();
   DateTime? _installDate;
   bool _saving = false;
+
+  bool get _isEdit => widget.editing != null;
 
   @override
   void initState() {
     super.initState();
+    final e = widget.editing;
+    if (e != null) {
+      _branch = branches.contains(e.branch) ? e.branch : branches.first;
+      _customerType = e.customerType;
+      _items
+        ..clear()
+        ..addAll([for (final i in e.items) OrderItem.fromJson(i.toJson())]);
+      _name.text = e.customerName;
+      _phone.text = e.customerPhone;
+      _address.text = e.address;
+      _note.text = e.note;
+      _installDate = e.installDate;
+      _discount.text = MoneyField.text(e.discount);
+      return;
+    }
     final state = AppScope.read(context);
     if (state.hasAddress) _address.text = '${state.region}, ${state.district}';
   }
@@ -40,11 +63,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     _phone.dispose();
     _address.dispose();
     _note.dispose();
+    _discount.dispose();
+    _prepay.dispose();
     super.dispose();
   }
 
   double get _area => _items.fold(0, (a, i) => a + i.area);
   int get _sizeCount => _items.fold(0, (a, i) => a + i.sizeCount);
+  double get _itemsSum => _items.fold(0, (a, i) => a + i.sum);
+  double get _discountValue => parseMoney(_discount.text);
+  double get _prepayValue => parseMoney(_prepay.text);
+  double get _total =>
+      (_itemsSum - _discountValue).clamp(0, double.infinity).toDouble();
 
   String? get _step1Problem {
     if (_customerType == null) return 'Buyurtmachini tanlang';
@@ -55,30 +85,51 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     return null;
   }
 
-  bool get _step2Valid =>
-      _customerType == CustomerType.office ||
-      (_name.text.trim().isNotEmpty && _phone.text.trim().length >= 9);
+  String? get _step2Problem {
+    if (_customerType == CustomerType.client) {
+      if (_name.text.trim().isEmpty) return 'Mijoz ismini kiriting';
+      if (_phone.text.replaceAll(RegExp(r'\D'), '').length < 9) {
+        return 'Telefon raqamni kiriting';
+      }
+    }
+    if (_discountValue > _itemsSum) return "Chegirma summadan ko'p";
+    if (_prepayValue > _total) return "Oldindan to'lov summadan ko'p";
+    return null;
+  }
 
   Future<void> _save() async {
     setState(() => _saving = true);
     final state = AppScope.read(context);
+    final e = widget.editing;
+    final now = DateTime.now();
     final order = Order(
-      number: state.nextOrderNumber,
+      number: e?.number ?? state.nextOrderNumber,
       branch: _branch,
       customerType: _customerType!,
       items: _items,
-      createdAt: DateTime.now(),
+      createdAt: e?.createdAt ?? now,
       customerName: _name.text.trim(),
       customerPhone: _phone.text.trim(),
       address: _address.text.trim(),
       note: _note.text.trim(),
       installDate: _installDate,
+      discount: _discountValue,
+      payments: e?.payments ??
+          [if (_prepayValue > 0) Payment(amount: _prepayValue, date: now)],
+      installedAt: e?.installedAt,
     );
-    await state.addOrder(order);
+    if (e != null) {
+      await state.updateOrder(order);
+    } else {
+      await state.addOrder(order);
+    }
     if (!mounted) return;
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Buyurtma № ${order.number} saqlandi')),
+      SnackBar(
+          content: Text(e != null
+              ? "Buyurtma № ${order.number} o'zgartirildi"
+              : 'Buyurtma № ${order.number} saqlandi')),
     );
   }
 
@@ -97,7 +148,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final number = AppScope.of(context).nextOrderNumber;
+    final number =
+        widget.editing?.number ?? AppScope.of(context).nextOrderNumber;
     return PopScope(
       canPop: _step == 0,
       onPopInvokedWithResult: (didPop, _) {
@@ -107,7 +159,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _Header(number: number, branch: _branch, step: _step),
+              _Header(
+                  number: number,
+                  title: _isEdit ? 'Tahrirlash' : 'Buyurtma',
+                  step: _step),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -123,7 +178,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   Widget _bottomBar() {
-    final problem = _step1Problem;
+    final problem = _step == 0 ? _step1Problem : _step2Problem;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
@@ -137,10 +192,14 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         children: [
           Row(
             children: [
-              Text('Jami', style: const TextStyle(color: AppColors.lightMuted)),
-              const Spacer(),
-              Text("$_sizeCount o'lcham · ${formatArea(_area)} m²",
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              Expanded(
+                child: Text("$_sizeCount dona · ${formatArea(_area)} m²",
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.lightMuted)),
+              ),
+              Text(formatMoney(_step == 0 ? _itemsSum : _total),
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w800)),
             ],
           ),
           const SizedBox(height: 10),
@@ -167,8 +226,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 Expanded(
                   flex: 2,
                   child: FilledButton(
-                    onPressed: _step2Valid && !_saving ? _save : null,
-                    child: const Text('Buyurtmani saqlash'),
+                    onPressed: problem == null && !_saving ? _save : null,
+                    child: Text(problem ??
+                        (_isEdit ? 'Saqlash' : 'Buyurtmani saqlash')),
                   ),
                 ),
               ],
@@ -248,6 +308,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         _ItemCard(
           key: ObjectKey(_items[i]),
           item: _items[i],
+          prices: AppScope.read(context).prices,
           onChanged: () => setState(() {}),
           onRemove: _items.length > 1
               ? () => setState(() => _items.removeAt(i))
@@ -348,43 +409,82 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       ),
       const SizedBox(height: 12),
       _Section(
+        title: "To'lov",
+        child: Column(
+          children: [
+            MoneyField(
+              controller: _discount,
+              label: 'Chegirma',
+              icon: Icons.percent_rounded,
+              onChanged: (_) => setState(() {}),
+            ),
+            if (!_isEdit) ...[
+              const SizedBox(height: 10),
+              MoneyField(
+                controller: _prepay,
+                label: "Oldindan to'lov (zaklad)",
+                icon: Icons.payments_outlined,
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      _Section(
         title: 'Buyurtma',
         child: Column(
           children: [
             _kv('Filial', _branch),
             _kv('Buyurtmachi', _customerType!.label),
             for (final i in _items)
-              _kv(i.type ?? '',
-                  "${i.sizeCount} o'lcham · ${formatArea(i.area)} m²"),
+              _kv(i.model.isEmpty ? i.type ?? '' : '${i.type} · ${i.model}',
+                  "${i.sizeCount} dona · ${formatArea(i.area)} m²"),
+            const Divider(height: 20),
+            _kv('Mahsulotlar', formatMoney(_itemsSum)),
+            if (_discountValue > 0)
+              _kv('Chegirma', '− ${formatMoney(_discountValue)}'),
+            _kv('Umumiy summa', formatMoney(_total), bold: true),
+            if (!_isEdit && _prepayValue > 0) ...[
+              _kv("Oldindan to'lov", formatMoney(_prepayValue)),
+              _kv('Qoldiq', formatMoney(_total - _prepayValue), bold: true),
+            ],
           ],
         ),
       ),
     ];
   }
 
-  Widget _kv(String k, String v) => Padding(
+  Widget _kv(String k, String v, {bool bold = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
             Expanded(
                 child: Text(k,
-                    style: const TextStyle(color: AppColors.lightMuted))),
-            Text(v, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    overflow: TextOverflow.ellipsis,
+                    style: bold
+                        ? const TextStyle(fontWeight: FontWeight.w700)
+                        : const TextStyle(color: AppColors.lightMuted))),
+            const SizedBox(width: 8),
+            Text(v,
+                style: TextStyle(
+                    fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+                    fontSize: bold ? 16 : null)),
           ],
         ),
       );
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.number, required this.branch, required this.step});
+  const _Header({required this.number, required this.title, required this.step});
 
   final int number;
-  final String branch;
+  final String title;
   final int step;
 
   @override
   Widget build(BuildContext context) {
-    const labels = ["Mahsulot va o'lchamlar", "Mijoz va o'rnatish"];
+    const labels = ["Mahsulot va o'lchamlar", "Mijoz, o'rnatish va to'lov"];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       child: Column(
@@ -392,10 +492,10 @@ class _Header extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Flexible(
-                child: Text('Buyurtma',
+              Flexible(
+                child: Text(title,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.3)),
@@ -526,20 +626,53 @@ class _Choice extends StatelessWidget {
   }
 }
 
-class _ItemCard extends StatelessWidget {
+class _ItemCard extends StatefulWidget {
   const _ItemCard({
     super.key,
     required this.item,
+    required this.prices,
     required this.onChanged,
     this.onRemove,
   });
 
   final OrderItem item;
+  final Map<String, double> prices;
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
 
   @override
+  State<_ItemCard> createState() => _ItemCardState();
+}
+
+class _ItemCardState extends State<_ItemCard> {
+  late final _model = TextEditingController(text: widget.item.model);
+  late final _price =
+      TextEditingController(text: MoneyField.text(widget.item.pricePerM2));
+
+  OrderItem get item => widget.item;
+
+  @override
+  void dispose() {
+    _model.dispose();
+    _price.dispose();
+    super.dispose();
+  }
+
+  void _setType(String? type) {
+    final oldDefault = widget.prices[item.type] ?? 0;
+    item.type = type;
+    // Narx qo'lda o'zgartirilmagan bo'lsa, yangi turning narxini qo'yamiz.
+    if (type != null &&
+        (item.pricePerM2 == 0 || item.pricePerM2 == oldDefault)) {
+      item.pricePerM2 = widget.prices[type] ?? 0;
+      _price.text = MoneyField.text(item.pricePerM2);
+    }
+    widget.onChanged();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final onChanged = widget.onChanged;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -561,18 +694,46 @@ class _ItemCard extends StatelessWidget {
                       for (final t in productTypes)
                         DropdownMenuItem(value: t, child: Text(t)),
                     ],
+                    onChanged: _setType,
+                  ),
+                ),
+                if (widget.onRemove != null)
+                  IconButton(
+                    tooltip: "Mahsulotni o'chirish",
+                    onPressed: widget.onRemove,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _model,
+                    textCapitalization: TextCapitalization.characters,
                     onChanged: (v) {
-                      item.type = v;
+                      item.model = v.trim();
+                      onChanged();
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Model / kod',
+                      prefixIcon: Icon(Icons.qr_code_2_rounded),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: MoneyField(
+                    controller: _price,
+                    hint: '1 m² narxi',
+                    suffix: "so'm/m²",
+                    onChanged: (v) {
+                      item.pricePerM2 = v;
                       onChanged();
                     },
                   ),
                 ),
-                if (onRemove != null)
-                  IconButton(
-                    tooltip: "Mahsulotni o'chirish",
-                    onPressed: onRemove,
-                    icon: const Icon(Icons.delete_outline_rounded),
-                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -599,11 +760,19 @@ class _ItemCard extends StatelessWidget {
                   label: const Text("O'lcham"),
                 ),
                 Expanded(
-                  child: Text(
-                      "${item.sizeCount} o'lcham · ${formatArea(item.area)} m²",
-                      textAlign: TextAlign.right,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.lightMuted)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                          "${item.sizeCount} dona · ${formatArea(item.area)} m²",
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, color: AppColors.lightMuted)),
+                      Text(formatMoney(item.sum),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ],
+                  ),
                 ),
               ],
             ),

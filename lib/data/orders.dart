@@ -15,6 +15,16 @@ const productTypes = [
   'Rim pardasi',
 ];
 
+/// Boshlang'ich narxlar (1 m² uchun, so'm). "Narxlar" bo'limida o'zgartiriladi.
+const defaultPrices = {
+  'Vertikal jalyuzi': 120000.0,
+  'Gorizontal jalyuzi': 110000.0,
+  'Rulonli parda': 150000.0,
+  'Kun-tun (zebra) parda': 190000.0,
+  'Plisse parda': 250000.0,
+  'Rim pardasi': 220000.0,
+};
+
 enum CustomerType { office, client }
 
 extension CustomerTypeLabel on CustomerType {
@@ -45,11 +55,23 @@ class OrderSize {
 }
 
 class OrderItem {
-  OrderItem({this.type, List<OrderSize>? sizes})
-      : sizes = sizes ?? [OrderSize()];
+  OrderItem({
+    this.type,
+    List<OrderSize>? sizes,
+    this.pricePerM2 = 0,
+    this.model = '',
+  }) : sizes = sizes ?? [OrderSize()];
 
   String? type;
+
+  /// Mato yoki model kodi, masalan "LIZBON-06".
+  String model;
   final List<OrderSize> sizes;
+
+  /// 1 m² narxi, so'mda.
+  double pricePerM2;
+
+  double get sum => area * pricePerM2;
 
   Iterable<OrderSize> get validSizes => sizes.where((s) => s.isValid);
   double get area => validSizes.fold(0, (a, s) => a + s.area);
@@ -58,15 +80,35 @@ class OrderItem {
 
   Map<String, dynamic> toJson() => {
         'type': type,
+        'price': pricePerM2,
+        'model': model,
         'sizes': [for (final s in validSizes) s.toJson()],
       };
 
   factory OrderItem.fromJson(Map<String, dynamic> j) => OrderItem(
         type: j['type'] as String?,
+        pricePerM2: (j['price'] as num?)?.toDouble() ?? 0,
+        model: j['model'] as String? ?? '',
         sizes: [
           for (final s in j['sizes'] as List)
             OrderSize.fromJson(s as Map<String, dynamic>),
         ],
+      );
+}
+
+/// Kassaga tushgan to'lov.
+class Payment {
+  Payment({required this.amount, required this.date});
+
+  final double amount;
+  final DateTime date;
+
+  Map<String, dynamic> toJson() =>
+      {'amount': amount, 'date': date.toIso8601String()};
+
+  factory Payment.fromJson(Map<String, dynamic> j) => Payment(
+        amount: (j['amount'] as num).toDouble(),
+        date: DateTime.parse(j['date'] as String),
       );
 }
 
@@ -82,7 +124,10 @@ class Order {
     this.address = '',
     this.note = '',
     this.installDate,
-  });
+    this.discount = 0,
+    List<Payment>? payments,
+    this.installedAt,
+  }) : payments = payments ?? [];
 
   final int number;
   final String branch;
@@ -94,6 +139,46 @@ class Order {
   final String address;
   final String note;
   final DateTime? installDate;
+
+  /// Chegirma, so'mda.
+  final double discount;
+  final List<Payment> payments;
+
+  /// O'rnatilgan kun (o'rnatilmagan bo'lsa null).
+  DateTime? installedAt;
+
+  Order copyWith({DateTime? installDate, bool clearInstallDate = false}) =>
+      Order(
+        number: number,
+        branch: branch,
+        customerType: customerType,
+        items: items,
+        createdAt: createdAt,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        address: address,
+        note: note,
+        installDate:
+            clearInstallDate ? null : (installDate ?? this.installDate),
+        discount: discount,
+        payments: payments,
+        installedAt: installedAt,
+      );
+
+  bool get isInstalled => installedAt != null;
+  bool get isPaid => total > 0 && remaining == 0;
+
+  /// O'rnatish sanasi bugundan necha kun keyin (o'tgan bo'lsa manfiy).
+  int? daysToInstall(DateTime now) => installDate == null
+      ? null
+      : dateOnly(installDate!).difference(dateOnly(now)).inDays;
+
+  bool isOverdue(DateTime now) =>
+      !isInstalled && (daysToInstall(now) ?? 0) < 0;
+  double get total =>
+      (items.fold<double>(0, (a, i) => a + i.sum) - discount).clamp(0, double.infinity);
+  double get paid => payments.fold(0, (a, p) => a + p.amount);
+  double get remaining => (total - paid).clamp(0, double.infinity);
 
   double get area => items.fold(0, (a, i) => a + i.area);
   int get sizeCount => items.fold(0, (a, i) => a + i.sizeCount);
@@ -113,6 +198,9 @@ class Order {
         'address': address,
         'note': note,
         'installDate': installDate?.toIso8601String(),
+        'discount': discount,
+        'payments': [for (final p in payments) p.toJson()],
+        'installedAt': installedAt?.toIso8601String(),
       };
 
   factory Order.fromJson(Map<String, dynamic> j) => Order(
@@ -131,6 +219,14 @@ class Order {
         installDate: j['installDate'] == null
             ? null
             : DateTime.parse(j['installDate'] as String),
+        discount: (j['discount'] as num?)?.toDouble() ?? 0,
+        payments: [
+          for (final p in (j['payments'] as List?) ?? const [])
+            Payment.fromJson(p as Map<String, dynamic>),
+        ],
+        installedAt: j['installedAt'] == null
+            ? null
+            : DateTime.parse(j['installedAt'] as String),
       );
 }
 
@@ -158,3 +254,176 @@ String formatArea(double v) => v
 
 String formatDate(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+
+/// "25 860 254 so'm".
+String formatMoney(double v) => "${formatNumber(v)} so'm";
+
+/// "25 860 254" (so'zsiz).
+String formatNumber(double v) {
+  final digits = v.round().abs().toString();
+  final buf = StringBuffer(v < 0 ? '-' : '');
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) buf.write(' ');
+    buf.write(digits[i]);
+  }
+  return buf.toString();
+}
+
+/// "1 250 000" kabi matndan summani oladi.
+double parseMoney(String s) =>
+    double.tryParse(s.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Panel uchun davr.
+enum Period { today, week, month, all }
+
+extension PeriodLabel on Period {
+  String get label => switch (this) {
+        Period.today => 'Bugun',
+        Period.week => '7 kun',
+        Period.month => 'Shu oy',
+        Period.all => 'Hammasi',
+      };
+
+  bool contains(DateTime d, DateTime now) {
+    final today = dateOnly(now);
+    return switch (this) {
+      Period.today => !d.isBefore(today),
+      Period.week => !d.isBefore(today.subtract(const Duration(days: 6))),
+      Period.month => d.year == now.year && d.month == now.month,
+      Period.all => true,
+    };
+  }
+}
+
+/// Buyurtmalar paneli ko'rsatkichlari.
+class OrderStats {
+  OrderStats(List<Order> orders, DateTime now) {
+    final today = dateOnly(now);
+    final tomorrow = today.add(const Duration(days: 1));
+    for (final o in orders) {
+      count++;
+      total += o.total;
+      paid += o.paid;
+      if (o.isInstalled) {
+        if (o.remaining > 0) {
+          debt += o.remaining;
+          debtCount++;
+        }
+        continue;
+      }
+      remaining += o.remaining;
+      remainingCount++;
+      final d = o.installDate == null ? null : dateOnly(o.installDate!);
+      if (d == null) {
+        noDate++;
+      } else if (d.isBefore(today)) {
+        overdue++;
+        final late = today.difference(d).inDays;
+        if (late > maxLateDays) maxLateDays = late;
+      } else if (d == today) {
+        installToday++;
+      } else if (d == tomorrow) {
+        installTomorrow++;
+      }
+    }
+  }
+
+  int count = 0;
+  double total = 0;
+  double paid = 0;
+  double debt = 0;
+  int debtCount = 0;
+  double remaining = 0;
+  int remainingCount = 0;
+  int overdue = 0;
+  int maxLateDays = 0;
+  int installToday = 0;
+  int installTomorrow = 0;
+  int noDate = 0;
+
+  int get paidPercent => total == 0 ? 0 : (paid / total * 100).round();
+}
+
+/// Buyurtmalar ro'yxatidagi holat filtri.
+enum OrderFilter {
+  all('Hammasi'),
+  overdue("Muddati o'tgan"),
+  today('Bugun'),
+  tomorrow('Ertaga'),
+  waiting('Montaj kutilmoqda'),
+  installed("O'rnatilgan"),
+  debtor("Qarzdor (o'rnatilgan)"),
+  remaining("Qoldiq (o'rnatilmagan)"),
+  paid("To'langan"),
+  noDate('Sanasiz');
+
+  const OrderFilter(this.label);
+  final String label;
+
+  bool test(Order o, DateTime now) => switch (this) {
+        OrderFilter.all => true,
+        OrderFilter.overdue => o.isOverdue(now),
+        OrderFilter.today => !o.isInstalled && o.daysToInstall(now) == 0,
+        OrderFilter.tomorrow => !o.isInstalled && o.daysToInstall(now) == 1,
+        OrderFilter.waiting => !o.isInstalled,
+        OrderFilter.installed => o.isInstalled,
+        OrderFilter.debtor => o.isInstalled && o.remaining > 0,
+        OrderFilter.remaining => !o.isInstalled && o.remaining > 0,
+        OrderFilter.paid => o.isPaid,
+        OrderFilter.noDate => !o.isInstalled && o.installDate == null,
+      };
+}
+
+enum OrderSort {
+  auto('Avto tartib'),
+  newest('Avval yangilari'),
+  install('Montaj sanasi bo\'yicha');
+
+  const OrderSort(this.label);
+  final String label;
+}
+
+/// Avto tartib: muddati o'tganlar, keyin yaqin montajlar, sanasizlar,
+/// oxirida o'rnatilganlar.
+List<Order> sortOrders(List<Order> orders, OrderSort sort, DateTime now) {
+  final list = [...orders];
+  int byNumberDesc(Order a, Order b) => b.number.compareTo(a.number);
+  switch (sort) {
+    case OrderSort.newest:
+      list.sort(byNumberDesc);
+    case OrderSort.install:
+    case OrderSort.auto:
+      int rank(Order o) {
+        if (o.isInstalled) return 3;
+        if (o.installDate == null) return sort == OrderSort.auto ? 2 : 1;
+        return sort == OrderSort.auto ? (o.isOverdue(now) ? 0 : 1) : 0;
+      }
+      list.sort((a, b) {
+        final r = rank(a).compareTo(rank(b));
+        if (r != 0) return r;
+        final da = a.installDate, db = b.installDate;
+        if (da != null && db != null && !a.isInstalled) {
+          final c = da.compareTo(db);
+          if (c != 0) return c;
+        }
+        return byNumberDesc(a, b);
+      });
+  }
+  return list;
+}
+
+const _months = [
+  'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+  'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr',
+];
+
+/// "8 oktabr".
+String formatDay(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+
+/// "+998901234567" → "+998 90 123 45 67".
+String formatPhone(String p) {
+  final m = RegExp(r'^\+998(\d{2})(\d{3})(\d{2})(\d{2})$').firstMatch(p);
+  return m == null ? p : '+998 ${m[1]} ${m[2]} ${m[3]} ${m[4]}';
+}

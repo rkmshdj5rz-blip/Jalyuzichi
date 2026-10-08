@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jalyuzichi/app_state.dart';
 import 'package:jalyuzichi/data/orders.dart';
+import 'package:jalyuzichi/data/sample_orders.dart';
 import 'package:jalyuzichi/main.dart';
+import 'package:jalyuzichi/widgets/money_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -16,7 +18,78 @@ void main() {
     expect(formatArea(s.fold(0.0, (a, x) => a + x.area)), '6,11');
   });
 
-  testWidgets("buyurtma kiritiladi va ro'yxatda ko'rinadi", (tester) async {
+  test('summa va telefon formatlari', () {
+    expect(formatMoney(25860254), "25 860 254 so'm");
+    expect(parseMoney('1 250 000'), 1250000);
+    expect(formatPhone('+998901234567'), '+998 90 123 45 67');
+    const f = MoneyInputFormatter();
+    expect(
+        f.formatEditUpdate(TextEditingValue.empty,
+                const TextEditingValue(text: '1250000'))
+            .text,
+        '1 250 000');
+  });
+
+  test("panel ko'rsatkichlari va filtrlar namuna buyurtmalarda to'g'ri", () {
+    final now = DateTime(2026, 10, 8, 12);
+    final orders = sampleOrders(now, 1001);
+    final stats = OrderStats(orders, now);
+    expect(stats.count, orders.length);
+    expect(stats.total, closeTo(orders.fold(0.0, (a, o) => a + o.total), 1));
+    expect(stats.paid + stats.debt + stats.remaining, closeTo(stats.total, 1));
+    for (final f in OrderFilter.values) {
+      final n = orders.where((o) => f.test(o, now)).length;
+      switch (f) {
+        case OrderFilter.all:
+          expect(n, orders.length);
+        case OrderFilter.overdue:
+          expect(n, stats.overdue);
+        case OrderFilter.today:
+          expect(n, stats.installToday);
+        case OrderFilter.tomorrow:
+          expect(n, stats.installTomorrow);
+        case OrderFilter.noDate:
+          expect(n, stats.noDate);
+        case OrderFilter.debtor:
+          expect(n, stats.debtCount);
+        case OrderFilter.remaining:
+          expect(n, lessThanOrEqualTo(stats.remainingCount));
+        default:
+          break;
+      }
+    }
+    // Avto tartibda muddati o'tganlar birinchi, o'rnatilganlar oxirida.
+    final sorted = sortOrders(orders, OrderSort.auto, now);
+    if (stats.overdue > 0) expect(sorted.first.isOverdue(now), isTrue);
+    expect(sorted.last.isInstalled, isTrue);
+  });
+
+  test("to'lov qo'shilgach qoldiq kamayadi", () {
+    final o = Order(
+      number: 1,
+      branch: branches.first,
+      customerType: CustomerType.client,
+      createdAt: DateTime(2026, 10, 1),
+      discount: 20000,
+      items: [
+        OrderItem(
+            type: productTypes.first,
+            pricePerM2: 100000,
+            sizes: [OrderSize(width: 100, height: 200)]),
+      ],
+    );
+    expect(o.total, 180000);
+    o.payments.add(Payment(amount: 80000, date: DateTime(2026, 10, 2)));
+    expect(o.remaining, 100000);
+    expect(o.isPaid, isFalse);
+    o.payments.add(Payment(amount: 100000, date: DateTime(2026, 10, 3)));
+    expect(o.isPaid, isTrue);
+    final back = Order.fromJson(o.toJson());
+    expect(back.total, 180000);
+    expect(back.paid, 180000);
+  });
+
+  testWidgets("buyurtma narx va zaklad bilan kiritiladi", (tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -32,11 +105,12 @@ void main() {
         AppScope(state: state, child: const JalyuzichiApp(startLoggedIn: true)));
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('Buyurtmalar'));
+    await tester.tap(find.descendant(
+        of: find.byType(NavigationBar), matching: find.text('Buyurtmalar')));
     await tester.pumpAndSettle();
     expect(find.text("Hali buyurtma yo'q"), findsOneWidget);
 
-    await tester.tap(find.text('Buyurtma'));
+    await tester.tap(find.text('Yangi buyurtma'));
     await tester.pumpAndSettle();
     expect(find.text('№ 1001'), findsOneWidget);
     expect(find.text('Buyurtmachini tanlang'), findsOneWidget);
@@ -47,10 +121,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rulonli parda').last);
     await tester.pumpAndSettle();
+    // Narx "Narxlar"dan o'zi qo'yiladi.
+    expect(find.text('150 000'), findsOneWidget);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Model / kod'), 'LIZBON-06');
     await tester.enterText(find.widgetWithText(TextFormField, 'eni'), '120');
     await tester.enterText(find.widgetWithText(TextFormField, "bo'yi"), '150');
     await tester.pump();
-    expect(find.text("1 o'lcham · 1,8 m²"), findsWidgets);
+    expect(find.text('1 dona · 1,8 m²'), findsWidgets);
+    expect(find.text("270 000 so'm"), findsWidgets);
 
     await tester.tap(find.text('Davom etish'));
     await tester.pumpAndSettle();
@@ -58,13 +137,32 @@ void main() {
         find.widgetWithText(TextField, 'Ism familiya'), 'Aziz');
     await tester.enterText(
         find.widgetWithText(TextField, '+998 90 123 45 67'), '+998901112233');
+    await tester.enterText(find.widgetWithText(TextField, 'Chegirma'), '20000');
+    await tester.enterText(
+        find.widgetWithText(TextField, "Oldindan to'lov (zaklad)"), '100000');
     await tester.pump();
+    expect(find.text("250 000 so'm"), findsWidgets);
     await tester.tap(find.text('Buyurtmani saqlash'));
     await tester.pumpAndSettle();
 
-    expect(find.text('№ 1001'), findsOneWidget);
-    expect(find.text('Aziz'), findsOneWidget);
-    expect(state.orders.single.area, closeTo(1.8, 1e-9));
+    final o = state.orders.single;
+    expect(o.area, closeTo(1.8, 1e-9));
+    expect(o.items.single.model, 'LIZBON-06');
+    expect(o.total, 250000);
+    expect(o.paid, 100000);
     expect(state.nextOrderNumber, 1002);
+    await tester.scrollUntilVisible(find.text('Aziz'), 300,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('№ 1001'), findsOneWidget);
+
+    // Kartadan to'lov qabul qilish.
+    await tester.ensureVisible(find.text("To'lov"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("To'lov"));
+    await tester.pumpAndSettle();
+    expect(find.text('150 000'), findsOneWidget);
+    await tester.tap(find.text('Saqlash'));
+    await tester.pumpAndSettle();
+    expect(state.orders.single.isPaid, isTrue);
   });
 }
