@@ -12,8 +12,16 @@ Kirish ketma-ketligi:
 4. Ro'yxatdan o'tish (ism)
 5. Sinxronlash (ma'lumotlarni yuklash)
 6. Manzil kiritish (viloyat, tuman, xaritadan belgilash)
-7. Bosh sahifa: bannerlar, xizmatlar bo'limlari, yon menyu, tungi rejim
-8. Buyurtmalar: ro'yxat va "+ Buyurtma" (filial, buyurtmachi, mahsulot va o'lchamlar, m² hisobi, matndan o'lcham qo'shish, mijoz va o'rnatish ma'lumotlari). Hozircha telefonning o'zida saqlanadi.
+7. Bosh sahifa: bannerlar, bugungi montajlar va qarzlar, bo'limlar, yaqin montajlar, eslatmalar (qo'ng'iroqcha), yon menyu
+
+Pastki menyu:
+
+- **Buyurtmalar**: panel (muddati o'tgan, bugun/ertaga o'rnatiladigan, sanasiz, umumiy summa, to'langan, qarz, qoldiq), davr va filial filtri, holat filtrlari, qidiruv, tartib, buyurtma kartalari (montaj va to'lov tugmalari), Kassa jurnali. Buyurtmani ochib tahrirlash, o'chirish, mijozga qo'ng'iroq qilish mumkin.
+- **Yangi buyurtma**: filial, buyurtmachi, mahsulot turi, model/kod, 1 m² narxi (Narxlardan o'zi qo'yiladi), o'lchamlar (matndan ham), mijoz, manzil, montaj sanasi, chegirma, oldindan to'lov.
+- **Narxlar**: 1 m² narxlari va tez hisoblash.
+- **Kabinet**: profil, shu oy natijasi, manzil, tungi rejim, chiqish.
+
+Ma'lumotlar hozircha telefonning o'zida saqlanadi; hisobdan chiqilganda buyurtmalar va narxlar o'chmaydi.
 
 Logo `lib/widgets/app_logo.dart` da, ranglar `lib/theme.dart` da.
 
@@ -34,4 +42,6 @@ Testlar: `flutter test`.
   Gateway kaliti faqat serverda turadi; ilovada `lib/services/auth_service.dart`
   dagi `MockAuthService` server bilan ishlaydigan xizmatga almashtiriladi.
 - Haqiqiy xarita (Google yoki Yandex)
-- Buyurtmalarni serverda saqlash, narxlar, dilerlar va omborxona bo'limlari
+- Buyurtmalarni serverda saqlash (bir nechta xodim bir vaqtda ishlashi uchun)
+- Tsexdan yuklar, dilerlar va omborxona bo'limlari
+- Haqiqiy filiallar va mahsulotlar ro'yxati

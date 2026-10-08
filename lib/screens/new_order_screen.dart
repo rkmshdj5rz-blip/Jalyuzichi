@@ -726,8 +726,8 @@ class _ItemCardState extends State<_ItemCard> {
                 Expanded(
                   child: MoneyField(
                     controller: _price,
-                    hint: '1 m² narxi',
-                    suffix: "so'm/m²",
+                    label: '1 m² narxi',
+                    suffix: "so'm",
                     onChanged: (v) {
                       item.pricePerM2 = v;
                       onChanged();

@@ -162,7 +162,10 @@ class _CalculatorState extends State<_Calculator> {
                 initialValue: _type,
                 isExpanded: true,
                 dropdownColor: Colors.white,
-                style: const TextStyle(color: AppColors.onBrand, fontSize: 15),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge!
+                    .copyWith(color: AppColors.onBrand),
                 borderRadius: BorderRadius.circular(14),
                 items: [
                   for (final t in productTypes)

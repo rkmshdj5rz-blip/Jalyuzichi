@@ -25,7 +25,7 @@ class OrderCard extends StatelessWidget {
         ? ("O'rnatilgan", _green)
         : order.isOverdue(now)
             ? ("Muddati o'tgan · ${-days!} kun", _red)
-            : ("O'rnatilmagan · kutilmoqda", _amber);
+            : ('Montaj kutilmoqda', _amber);
     final banner = order.isInstalled
         ? null
         : switch (days) {
