@@ -67,7 +67,7 @@ void main() {
   test("to'lov qo'shilgach qoldiq kamayadi", () {
     final o = Order(
       number: 1,
-      branch: branches.first,
+      branch: defaultBranchNames.first,
       customerType: CustomerType.client,
       createdAt: DateTime(2026, 10, 1),
       discount: 20000,

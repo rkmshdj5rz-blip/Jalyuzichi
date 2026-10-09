@@ -27,7 +27,7 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
   return [
     Order(
       number: n++,
-      branch: branches[0],
+      branch: defaultBranchNames[0],
       customerType: CustomerType.client,
       customerName: 'Namuna: Aziz',
       customerPhone: '+998 90 111 22 33',
@@ -38,7 +38,7 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
     ),
     Order(
       number: n++,
-      branch: branches[1],
+      branch: defaultBranchNames[1],
       customerType: CustomerType.client,
       customerName: 'Namuna: Dilnoza',
       customerPhone: '+998 93 444 55 66',
@@ -49,7 +49,7 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
     ),
     Order(
       number: n++,
-      branch: branches[0],
+      branch: defaultBranchNames[0],
       customerType: CustomerType.client,
       customerName: 'Namuna: Botir',
       customerPhone: '+998 94 777 88 99',
@@ -59,7 +59,7 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
     ),
     Order(
       number: n++,
-      branch: branches[2],
+      branch: defaultBranchNames[2],
       customerType: CustomerType.office,
       createdAt: day(-12),
       installDate: day(-6),
@@ -69,7 +69,7 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
     ),
     Order(
       number: n++,
-      branch: branches[1],
+      branch: defaultBranchNames[1],
       customerType: CustomerType.client,
       customerName: 'Namuna: Kamola',
       customerPhone: '+998 97 123 45 67',
@@ -81,7 +81,7 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
     ),
     Order(
       number: n++,
-      branch: branches[0],
+      branch: defaultBranchNames[0],
       customerType: CustomerType.client,
       customerName: 'Namuna: Sardor',
       customerPhone: '+998 99 222 33 44',

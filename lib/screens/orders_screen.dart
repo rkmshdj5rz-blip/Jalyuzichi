@@ -54,6 +54,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
+    // Tanlangan filial o'chirilgan bo'lsa, barcha filiallarga qaytamiz.
+    if (_branch != null && !state.branches.any((b) => b.name == _branch)) {
+      _branch = null;
+    }
     final now = DateTime.now();
     final all = state.orders;
     final scoped = [
@@ -331,7 +335,8 @@ class _BranchPicker extends StatelessWidget {
       ),
       items: [
         const DropdownMenuItem(value: null, child: Text('Barcha filiallar')),
-        for (final b in branches) DropdownMenuItem(value: b, child: Text(b)),
+        for (final b in AppScope.of(context).branches)
+          DropdownMenuItem(value: b.name, child: Text(b.name)),
       ],
       onChanged: onChanged,
     );

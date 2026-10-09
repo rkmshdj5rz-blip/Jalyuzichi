@@ -20,7 +20,7 @@ class NewOrderScreen extends StatefulWidget {
 
 class _NewOrderScreenState extends State<NewOrderScreen> {
   int _step = 0;
-  String _branch = branches.first;
+  String _branch = '';
   CustomerType? _customerType;
   final List<OrderItem> _items = [OrderItem()];
 
@@ -40,7 +40,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     super.initState();
     final e = widget.editing;
     if (e != null) {
-      _branch = branches.contains(e.branch) ? e.branch : branches.first;
+      _branch = e.branch;
       _customerType = e.customerType;
       _items
         ..clear()
@@ -54,6 +54,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       return;
     }
     final state = AppScope.read(context);
+    _branch = state.mainBranch?.name ?? '';
     if (state.hasAddress) _address.text = '${state.region}, ${state.district}';
   }
 
@@ -77,6 +78,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       (_itemsSum - _discountValue).clamp(0, double.infinity).toDouble();
 
   String? get _step1Problem {
+    if (_branch.isEmpty) return 'Filialni tanlang';
     if (_customerType == null) return 'Buyurtmachini tanlang';
     if (_items.any((i) => i.type == null)) return 'Jalyuzi turini tanlang';
     if (_items.any((i) => i.validSizes.isEmpty)) {
@@ -243,13 +245,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       _Section(
         title: 'Filial',
         child: DropdownButtonFormField<String>(
-          initialValue: _branch,
+          initialValue: _branch.isEmpty ? null : _branch,
+          hint: const Text("Filial yo'q: Filiallar bo'limida qo'shing"),
           isExpanded: true,
           borderRadius: BorderRadius.circular(14),
           decoration:
               const InputDecoration(prefixIcon: Icon(Icons.store_outlined)),
           items: [
-            for (final b in branches) DropdownMenuItem(value: b, child: Text(b)),
+            for (final b in {
+              for (final b in AppScope.read(context).activeBranches) b.name,
+              if (_branch.isNotEmpty) _branch,
+            })
+              DropdownMenuItem(value: b, child: Text(b)),
           ],
           onChanged: (v) => setState(() => _branch = v!),
         ),

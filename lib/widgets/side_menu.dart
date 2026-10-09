@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../data/orders.dart';
+import '../screens/branches_screen.dart';
 import '../screens/cabinet_screen.dart';
 import '../screens/orders_screen.dart';
 import '../screens/profile_screen.dart';
@@ -82,6 +83,10 @@ class SideMenu extends StatelessWidget {
                       () => onOrders(section: OrdersSection.cash)),
                   item(Icons.local_shipping_outlined, 'Tsexdan yuklar',
                       () => onOrders(section: OrdersSection.workshop)),
+                  item(Icons.store_outlined, 'Filiallar', () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const BranchesScreen()));
+                  }),
                   item(Icons.sell_outlined, 'Narxlar', () => onTab(2)),
                   item(Icons.person_outline_rounded, 'Kabinet', () => onTab(3)),
                   item(Icons.edit_outlined, 'Profilni tahrirlash', () {

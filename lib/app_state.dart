@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/branches.dart';
 import 'data/orders.dart';
 import 'data/sample_orders.dart';
 
@@ -104,6 +105,77 @@ class AppState extends ChangeNotifier {
     ]);
     notifyListeners();
   }
+
+  /// Filial va do'konlar.
+  List<Branch> get branches {
+    final raw = _prefs.getString('branches');
+    if (raw == null) {
+      return [
+        for (var i = 0; i < defaultBranchNames.length; i++)
+          Branch(id: 'b${i + 1}', name: defaultBranchNames[i]),
+      ];
+    }
+    return [
+      for (final b in jsonDecode(raw) as List)
+        Branch.fromJson(b as Map<String, dynamic>),
+    ];
+  }
+
+  /// Yangi buyurtmada tanlanadigan faol filiallar.
+  List<Branch> get activeBranches => branches.where((b) => b.active).toList();
+
+  /// Asosiy filial (yangi buyurtmada birinchi tanlangan bo'ladi).
+  String? get mainBranchId => _prefs.getString('mainBranch');
+
+  Branch? get mainBranch {
+    final active = activeBranches;
+    if (active.isEmpty) return null;
+    return active.where((b) => b.id == mainBranchId).firstOrNull ?? active.first;
+  }
+
+  Future<void> setMainBranch(String id) async {
+    await _prefs.setString('mainBranch', id);
+    notifyListeners();
+  }
+
+  Future<void> _saveBranches(List<Branch> list) => _prefs.setString(
+      'branches', jsonEncode([for (final b in list) b.toJson()]));
+
+  /// Filialni qo'shadi yoki o'zgartiradi. Nomi o'zgarsa, eski buyurtmalardagi
+  /// nom ham yangilanadi.
+  Future<void> saveBranch(Branch branch) async {
+    final list = branches;
+    final i = list.indexWhere((b) => b.id == branch.id);
+    if (i < 0) {
+      list.add(branch);
+    } else {
+      final oldName = list[i].name;
+      list[i] = branch;
+      if (oldName != branch.name) {
+        final raw = _prefs.getStringList('orders') ?? <String>[];
+        await _prefs.setStringList('orders', [
+          for (final o in raw)
+            () {
+              final j = jsonDecode(o) as Map<String, dynamic>;
+              if (j['branch'] != oldName) return o;
+              j['branch'] = branch.name;
+              return jsonEncode(j);
+            }(),
+        ]);
+      }
+    }
+    await _saveBranches(list);
+    notifyListeners();
+  }
+
+  Future<void> deleteBranch(String id) async {
+    await _saveBranches(branches.where((b) => b.id != id).toList());
+    if (mainBranchId == id) await _prefs.remove('mainBranch');
+    notifyListeners();
+  }
+
+  /// Filialdagi buyurtmalar soni.
+  int ordersIn(Branch b) => orders.where((o) => o.branch == b.name).length;
 
   /// 1 m² narxlari (mahsulot turi bo'yicha).
   Map<String, double> get prices {

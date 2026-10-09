@@ -5,6 +5,7 @@ import '../app_state.dart';
 import '../data/orders.dart';
 import '../theme.dart';
 import '../widgets/address_sheet.dart';
+import 'branches_screen.dart';
 import 'country_screen.dart';
 import 'profile_screen.dart';
 
@@ -108,6 +109,14 @@ class CabinetScreen extends StatelessWidget {
           Card(
             child: Column(
               children: [
+                _Item(
+                  icon: Icons.store_outlined,
+                  title: 'Filiallar',
+                  value: '${state.branches.length} ta',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const BranchesScreen())),
+                ),
+                _divider,
                 _Item(
                   icon: Icons.location_on_outlined,
                   title: 'Manzil',

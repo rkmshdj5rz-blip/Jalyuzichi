@@ -1,6 +1,7 @@
 // Buyurtma va uning ichidagi mahsulotlar.
 
-const branches = [
+/// Birinchi ishga tushganda yaratiladigan filiallar.
+const defaultBranchNames = [
   '№1 Toshkent filiali',
   '№2 Angren filiali',
   '№3 Chirchiq filiali',
