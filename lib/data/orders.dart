@@ -34,24 +34,88 @@ extension CustomerTypeLabel on CustomerType {
 }
 
 /// Bitta o'lcham: eni va bo'yi santimetrda, soni dona.
+/// Boshqaruv turi.
+enum Control {
+  none("Bo'sh"),
+  chain('Zanjir'),
+  motor('Motor'),
+  manual("Qo'l");
+
+  const Control(this.label);
+  final String label;
+}
+
+/// Boshqaruv qaysi tomonda.
+enum Side {
+  left('Chap'),
+  right("O'ng"),
+  both("Chap+O'ng");
+
+  const Side(this.label);
+  final String label;
+}
+
+/// Karniz variantlari (rangi bilan).
+const karnizOptions = [
+  'Karnizsiz',
+  'Oq',
+  'Kumush',
+  'Jigarrang',
+  'Qora',
+  'Oltin',
+];
+
 class OrderSize {
-  OrderSize({this.width = 0, this.height = 0, this.count = 1});
+  OrderSize({
+    this.width = 0,
+    this.height = 0,
+    this.count = 1,
+    this.control = Control.chain,
+    this.side = Side.left,
+    this.karniz = 'Karnizsiz',
+  });
 
   double width;
   double height;
   int count;
+  Control control;
+  Side side;
+  String karniz;
 
   bool get isValid => width > 0 && height > 0 && count > 0;
 
   /// Kvadrat metr (barcha donalar bilan).
   double get area => width * height / 10000 * count;
 
-  Map<String, dynamic> toJson() => {'w': width, 'h': height, 'n': count};
+  /// Sozlamalar qisqacha: "Zanjir · Chap · Oq karniz".
+  String get optionsLabel => [
+        control.label,
+        if (control != Control.none) side.label,
+        karniz == 'Karnizsiz' ? 'Karnizsiz' : '$karniz karniz',
+      ].join(' · ');
+
+  void copyOptionsFrom(OrderSize o) {
+    control = o.control;
+    side = o.side;
+    karniz = o.karniz;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'w': width,
+        'h': height,
+        'n': count,
+        'ctl': control.name,
+        'side': side.name,
+        'karniz': karniz,
+      };
 
   factory OrderSize.fromJson(Map<String, dynamic> j) => OrderSize(
         width: (j['w'] as num).toDouble(),
         height: (j['h'] as num).toDouble(),
         count: j['n'] as int,
+        control: Control.values.asNameMap()[j['ctl']] ?? Control.chain,
+        side: Side.values.asNameMap()[j['side']] ?? Side.left,
+        karniz: j['karniz'] as String? ?? 'Karnizsiz',
       );
 }
 

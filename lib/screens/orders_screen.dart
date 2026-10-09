@@ -1042,8 +1042,17 @@ class OrderDetailScreen extends StatelessWidget {
                     for (final s in item.validSizes)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Text(
-                            '${formatArea(s.width)} × ${formatArea(s.height)} sm  ·  ${s.count} dona  ·  ${formatArea(s.area)} m²'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                '${formatArea(s.width)} × ${formatArea(s.height)} sm  ·  ${s.count} dona  ·  ${formatArea(s.area)} m²'),
+                            Text(s.optionsLabel,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.lightMuted)),
+                          ],
+                        ),
                       ),
                     if (item.pricePerM2 > 0) ...[
                       const Divider(),

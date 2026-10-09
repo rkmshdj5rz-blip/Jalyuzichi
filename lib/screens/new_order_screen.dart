@@ -5,8 +5,10 @@ import '../app_state.dart';
 import '../data/orders.dart';
 import '../data/products.dart';
 import '../theme.dart';
+import '../widgets/lenta_picker.dart';
 import '../widgets/money_field.dart';
 import '../widgets/payment_input.dart';
+import '../widgets/size_options_sheet.dart';
 import 'receipt_screen.dart';
 
 /// Yangi buyurtma kiritish: 1-qadam mahsulot va o'lchamlar,
@@ -687,10 +689,22 @@ class _ItemCardState extends State<_ItemCard> {
     widget.onChanged();
   }
 
-  void _setCollection(String? c) {
-    final p = _ofType(item.type).where((p) => p.collection == c).firstOrNull;
-    item.model = c ?? '';
-    if (p != null) _setPrice(p.price);
+  Future<void> _pickLenta() async {
+    final p = await showLentaPicker(context,
+        type: item.type!, products: _ofType(item.type), selected: item.model);
+    if (p == null) return;
+    item.model = p.collection;
+    _setPrice(p.price);
+    widget.onChanged();
+  }
+
+  Future<void> _editOptions(int i) async {
+    final r = await showSizeOptions(context,
+        index: i, size: item.sizes[i], canApplyToAll: item.sizes.length > 1);
+    if (r == null) return;
+    for (final s in r.applyToAll ? item.sizes : [item.sizes[i]]) {
+      s.copyOptionsFrom(r.options);
+    }
     widget.onChanged();
   }
 
@@ -698,10 +712,6 @@ class _ItemCardState extends State<_ItemCard> {
   Widget build(BuildContext context) {
     final onChanged = widget.onChanged;
     final types = {...typesOf(widget.products), ?item.type}.toList();
-    final collections = {
-      for (final p in _ofType(item.type)) p.collection,
-      if (item.model.isNotEmpty) item.model,
-    }.toList();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -740,23 +750,11 @@ class _ItemCardState extends State<_ItemCard> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(
-                  child: DropdownButtonFormField<String>(
-                    key: ValueKey('c-${item.type}'),
-                    initialValue: item.model.isEmpty ? null : item.model,
-                    isExpanded: true,
-                    borderRadius: BorderRadius.circular(14),
-                    decoration: const InputDecoration(
-                      hintText: 'Lenta kodi',
-                      prefixIcon: Icon(Icons.qr_code_2_rounded),
-                    ),
-                    items: [
-                      for (final c in collections)
-                        DropdownMenuItem(
-                            value: c, child: Text(c.isEmpty ? '—' : c)),
-                    ],
-                    onChanged: item.type == null ? null : _setCollection,
-                  ),
+                _LentaField(
+                  key: ValueKey('lenta-${item.type}'),
+                  value: item.model,
+                  enabled: item.type != null,
+                  onTap: _pickLenta,
                 ),
                 const SizedBox(height: 10),
                 SizedBox(
@@ -779,6 +777,7 @@ class _ItemCardState extends State<_ItemCard> {
                 key: ObjectKey(item.sizes[i]),
                 size: item.sizes[i],
                 onChanged: onChanged,
+                onOptions: () => _editOptions(i),
                 onRemove: item.sizes.length > 1
                     ? () {
                         item.sizes.removeAt(i);
@@ -790,7 +789,9 @@ class _ItemCardState extends State<_ItemCard> {
               children: [
                 TextButton.icon(
                   onPressed: () {
-                    item.sizes.add(OrderSize());
+                    // Yangi o'lcham oldingisining sozlamalarini oladi.
+                    item.sizes.add(
+                        OrderSize()..copyOptionsFrom(item.sizes.last));
                     onChanged();
                   },
                   icon: const Icon(Icons.add_rounded),
@@ -820,16 +821,51 @@ class _ItemCardState extends State<_ItemCard> {
   }
 }
 
+/// Lenta kodi maydoni: bosilganda qidiruvli ro'yxat ochiladi.
+class _LentaField extends StatelessWidget {
+  const _LentaField(
+      {super.key,
+      required this.value,
+      required this.enabled,
+      required this.onTap});
+
+  final String value;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(14),
+      child: InputDecorator(
+        isEmpty: value.isEmpty,
+        decoration: InputDecoration(
+          enabled: enabled,
+          hintText: 'Lenta kodi',
+          prefixIcon: const Icon(Icons.qr_code_2_rounded),
+          suffixIcon: const Icon(Icons.search_rounded),
+        ),
+        child: Text(value,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyLarge),
+      ),
+    );
+  }
+}
+
 class _SizeRow extends StatelessWidget {
   const _SizeRow({
     super.key,
     required this.size,
     required this.onChanged,
+    required this.onOptions,
     this.onRemove,
   });
 
   final OrderSize size;
   final VoidCallback onChanged;
+  final VoidCallback onOptions;
   final VoidCallback? onRemove;
 
   static String _initial(num v) => v == 0 ? '' : formatArea(v.toDouble());
@@ -847,9 +883,7 @@ class _SizeRow extends StatelessWidget {
         );
     const sep = TextStyle(fontSize: 16, color: AppColors.lightMuted);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+    final row = Row(
         children: [
           Expanded(
             flex: 3,
@@ -901,8 +935,20 @@ class _SizeRow extends StatelessWidget {
               },
             ),
           ),
+          const SizedBox(width: 6),
+          IconButton.filledTonal(
+            tooltip: 'Sozlamalar',
+            onPressed: onOptions,
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.brand.withValues(alpha: 0.35),
+              foregroundColor: AppColors.onBrand,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.tune_rounded, size: 20),
+          ),
           SizedBox(
-            width: 40,
+            width: 36,
             child: onRemove == null
                 ? null
                 : IconButton(
@@ -910,6 +956,25 @@ class _SizeRow extends StatelessWidget {
                     onPressed: onRemove,
                     icon: const Icon(Icons.close_rounded, size: 20),
                   ),
+          ),
+        ],
+      );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          row,
+          InkWell(
+            onTap: onOptions,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
+              child: Text(size.optionsLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12.5, color: AppColors.lightMuted)),
+            ),
           ),
         ],
       ),
