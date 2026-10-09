@@ -15,7 +15,7 @@ class Product {
   /// Jalyuzi turi, masalan "Kombo".
   String type;
 
-  /// Collection (mato yoki model), masalan "Collection-1".
+  /// Lenta kodi, masalan "L-101".
   String collection;
 
   /// 1 m² narxi, so'mda.
@@ -40,7 +40,7 @@ List<Product> defaultProducts() => [
         Product(
           id: 'p${i + 1}',
           type: productTypes[i],
-          collection: 'Standart',
+          collection: 'L-${101 + i}',
           price: defaultPrices[productTypes[i]] ?? 0,
         ),
     ];

@@ -60,7 +60,9 @@ List<Order> sampleOrders(DateTime now, int firstNumber) {
     Order(
       number: n++,
       branch: defaultBranchNames[2],
-      customerType: CustomerType.office,
+      customerType: CustomerType.client,
+      customerName: 'Nodira Yusupova',
+      customerPhone: '+998 93 555 12 34',
       createdAt: day(-12),
       installDate: day(-6),
       installedAt: day(-6),

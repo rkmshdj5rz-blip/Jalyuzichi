@@ -8,7 +8,7 @@ import '../widgets/money_field.dart';
 
 const _red = Color(0xFFE5484D);
 
-/// Narxlar: mahsulot qo'shish (tur, collection, 1 m² narxi) va katalog.
+/// Narxlar: mahsulot qo'shish (tur, lenta kodi, 1 m² narxi) va katalog.
 /// Yangi buyurtmada narx shu yerdan avtomatik qo'yiladi.
 class PricesScreen extends StatelessWidget {
   const PricesScreen({super.key});
@@ -23,7 +23,7 @@ class PricesScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          const Text('Narxlar',
+          const Text('Mahsulotlar narxlari',
               style: TextStyle(
                   fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
           const SizedBox(height: 4),
@@ -122,7 +122,7 @@ class _AddProductState extends State<_AddProduct> {
 
   String? get _problem {
     if (_type.text.trim().isEmpty) return 'Jalyuzi turini yozing';
-    if (_collection.text.trim().isEmpty) return 'Collectionni yozing';
+    if (_collection.text.trim().isEmpty) return 'Lenta kodini yozing';
     if (parseMoney(_price.text) <= 0) return 'Narxini yozing';
     return null;
   }
@@ -154,7 +154,7 @@ class _AddProductState extends State<_AddProduct> {
       messenger.showSnackBar(
           SnackBar(content: Text("${p.label} qo'shildi")));
     }
-    // Tur qoladi: bir turga bir nechta collection ketma-ket qo'shiladi.
+    // Tur qoladi: bir turga bir nechta lenta ketma-ket qo'shiladi.
     _collection.clear();
     _price.clear();
     setState(() {});
@@ -223,8 +223,8 @@ class _AddProductState extends State<_AddProduct> {
               ),
             ],
             const SizedBox(height: 10),
-            _field(_collection, 'Collection', 'Masalan: Collection-1',
-                Icons.layers_outlined),
+            _field(_collection, 'Lenta kodi', 'Masalan: L-101',
+                Icons.qr_code_2_rounded),
             const SizedBox(height: 10),
             MoneyField(
               controller: _price,
@@ -342,7 +342,7 @@ class _EditDialogState extends State<_EditDialog> {
             const SizedBox(height: 10),
             TextField(
               controller: _collection,
-              decoration: const InputDecoration(labelText: 'Collection'),
+              decoration: const InputDecoration(labelText: 'Lenta kodi'),
             ),
             const SizedBox(height: 10),
             MoneyField(

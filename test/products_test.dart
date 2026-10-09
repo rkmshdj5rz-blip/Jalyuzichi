@@ -6,7 +6,7 @@ import 'package:jalyuzichi/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets("mahsulot tur, collection va narx bilan qo'shiladi",
+  testWidgets("mahsulot tur, lenta kodi va narx bilan qo'shiladi",
       (tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
@@ -25,7 +25,7 @@ void main() {
     await tester.enterText(
         find.widgetWithText(TextField, 'Jalyuzi turi'), 'Kombo');
     await tester.enterText(
-        find.widgetWithText(TextField, 'Collection'), 'Collection-1');
+        find.widgetWithText(TextField, 'Lenta kodi'), 'Collection-1');
     await tester.enterText(
         find.widgetWithText(TextField, '1 m² narxi'), '110000');
     await tester.pump();
@@ -36,11 +36,11 @@ void main() {
     expect(p.type, 'Kombo');
     expect(p.price, 110000);
     expect(state.products.length, before + 1);
-    // Tur saqlanib qoladi, keyingi collection darhol yoziladi.
+    // Tur saqlanib qoladi, keyingi lenta darhol yoziladi.
     expect(find.text('Kombo'), findsWidgets);
 
     await tester.enterText(
-        find.widgetWithText(TextField, 'Collection'), 'Collection-2');
+        find.widgetWithText(TextField, 'Lenta kodi'), 'Collection-2');
     await tester.enterText(
         find.widgetWithText(TextField, '1 m² narxi'), '125000');
     await tester.pump();
@@ -50,7 +50,7 @@ void main() {
 
     // Bor mahsulotni qayta qo'shsa, narxi yangilanadi.
     await tester.enterText(
-        find.widgetWithText(TextField, 'Collection'), 'collection-1');
+        find.widgetWithText(TextField, 'Lenta kodi'), 'collection-1');
     await tester.enterText(
         find.widgetWithText(TextField, '1 m² narxi'), '115000');
     await tester.pump();

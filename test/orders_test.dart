@@ -125,16 +125,16 @@ void main() {
     await tester.tap(find.text('Yangi buyurtma'));
     await tester.pumpAndSettle();
     expect(find.text('№ 1001'), findsOneWidget);
-    expect(find.text('Buyurtmachini tanlang'), findsOneWidget);
+    expect(find.text('Ofis buyurtmasi'), findsNothing);
+    expect(find.text('Jalyuzi turini tanlang'), findsOneWidget);
 
-    await tester.tap(find.text('Mijoz'));
-    await tester.pump();
     await tester.tap(find.text('Jalyuzi turi'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rulonli parda').last);
     await tester.pumpAndSettle();
     // Narx "Narxlar"dan o'zi qo'yiladi.
     expect(find.text('150 000'), findsOneWidget);
+    expect(find.text('L-103'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextFormField, 'eni'), '120');
     await tester.enterText(find.widgetWithText(TextFormField, "bo'yi"), '150');
     await tester.pump();
@@ -172,7 +172,7 @@ void main() {
 
     final o = state.orders.single;
     expect(o.area, closeTo(1.8, 1e-9));
-    expect(o.items.single.model, 'Standart');
+    expect(o.items.single.model, 'L-103');
     expect(o.total, 250000);
     expect(o.paid, 100000);
     expect(state.nextOrderNumber, 1002);

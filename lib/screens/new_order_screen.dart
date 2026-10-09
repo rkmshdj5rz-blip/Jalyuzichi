@@ -24,7 +24,8 @@ class NewOrderScreen extends StatefulWidget {
 class _NewOrderScreenState extends State<NewOrderScreen> {
   int _step = 0;
   String _branch = '';
-  CustomerType? _customerType;
+  // Buyurtma doim mijozniki; eski "ofis" buyurtmalar tahrirda o'zgarmaydi.
+  CustomerType _customerType = CustomerType.client;
   final List<OrderItem> _items = [OrderItem()];
 
   final _name = TextEditingController();
@@ -93,7 +94,6 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   String? get _step1Problem {
     if (_branch.isEmpty) return 'Filialni tanlang';
-    if (_customerType == null) return 'Buyurtmachini tanlang';
     if (_items.any((i) => i.type == null)) return 'Jalyuzi turini tanlang';
     if (_items.any((i) => i.validSizes.isEmpty)) {
       return "Har bir mahsulotga kamida bitta o'lcham kiriting";
@@ -124,7 +124,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     final order = Order(
       number: e?.number ?? state.nextOrderNumber,
       branch: _branch,
-      customerType: _customerType!,
+      customerType: _customerType,
       items: _items,
       createdAt: e?.createdAt ?? now,
       customerName: _name.text.trim(),
@@ -286,27 +286,6 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               DropdownMenuItem(value: b, child: Text(b)),
           ],
           onChanged: (v) => setState(() => _branch = v!),
-        ),
-      ),
-      const SizedBox(height: 12),
-      _Section(
-        title: 'Buyurtmachi',
-        child: Row(
-          children: [
-            for (final t in CustomerType.values) ...[
-              Expanded(
-                child: _Choice(
-                  label: t.label,
-                  icon: t == CustomerType.office
-                      ? Icons.business_rounded
-                      : Icons.person_rounded,
-                  selected: _customerType == t,
-                  onTap: () => setState(() => _customerType = t),
-                ),
-              ),
-              if (t != CustomerType.values.last) const SizedBox(width: 10),
-            ],
-          ],
         ),
       ),
       const SizedBox(height: 20),
@@ -507,7 +486,6 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         child: Column(
           children: [
             _kv('Filial', _branch),
-            _kv('Buyurtmachi', _customerType!.label),
             for (final i in _items)
               _kv(i.model.isEmpty ? i.type ?? '' : '${i.type} · ${i.model}',
                   "${i.sizeCount} dona · ${formatArea(i.area)} m²"),
@@ -656,51 +634,6 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _Choice extends StatelessWidget {
-  const _Choice({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fill = Theme.of(context).inputDecorationTheme.fillColor;
-    return Material(
-      color: selected ? AppColors.brand : fill,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon,
-                  size: 20, color: selected ? AppColors.onBrand : null),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: selected ? AppColors.onBrand : null)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ItemCard extends StatefulWidget {
   const _ItemCard({
     super.key,
@@ -742,7 +675,7 @@ class _ItemCardState extends State<_ItemCard> {
   void _setType(String? type) {
     if (type == item.type) return;
     item.type = type;
-    // Turda bitta collection bo'lsa, o'zi tanlanadi.
+    // Turda bitta lenta bo'lsa, o'zi tanlanadi.
     final list = _ofType(type);
     if (list.length == 1) {
       item.model = list.single.collection;
@@ -814,8 +747,8 @@ class _ItemCardState extends State<_ItemCard> {
                     isExpanded: true,
                     borderRadius: BorderRadius.circular(14),
                     decoration: const InputDecoration(
-                      hintText: 'Collection',
-                      prefixIcon: Icon(Icons.layers_outlined),
+                      hintText: 'Lenta kodi',
+                      prefixIcon: Icon(Icons.qr_code_2_rounded),
                     ),
                     items: [
                       for (final c in collections)

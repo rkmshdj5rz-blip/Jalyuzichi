@@ -1008,7 +1008,7 @@ class OrderDetailScreen extends StatelessWidget {
               child: Column(
                 children: [
                   row('Filial', order.branch),
-                  row('Buyurtmachi', order.customerLabel),
+                  row('Mijoz', order.customerLabel),
                   if (order.customerPhone.isNotEmpty)
                     row('Telefon', order.customerPhone),
                   if (order.address.isNotEmpty) row('Manzil', order.address),
