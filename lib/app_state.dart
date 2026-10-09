@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/branches.dart';
 import 'data/orders.dart';
+import 'data/products.dart';
 import 'data/sample_orders.dart';
 
 /// Foydalanuvchi ma'lumotlari. Hozircha telefonning o'zida saqlanadi,
@@ -177,22 +178,43 @@ class AppState extends ChangeNotifier {
   /// Filialdagi buyurtmalar soni.
   int ordersIn(Branch b) => orders.where((o) => o.branch == b.name).length;
 
-  /// 1 m² narxlari (mahsulot turi bo'yicha).
-  Map<String, double> get prices {
-    final raw = _prefs.getString('prices');
-    final saved = raw == null
-        ? const <String, dynamic>{}
-        : jsonDecode(raw) as Map<String, dynamic>;
-    return {
-      for (final t in productTypes)
-        t: (saved[t] as num?)?.toDouble() ?? defaultPrices[t] ?? 0,
-    };
+  /// Mahsulotlar katalogi (tur, collection, narx).
+  List<Product> get products {
+    final raw = _prefs.getString('products');
+    if (raw == null) return defaultProducts();
+    return [
+      for (final p in jsonDecode(raw) as List)
+        Product.fromJson(p as Map<String, dynamic>),
+    ];
   }
 
-  double priceFor(String type) => prices[type] ?? 0;
+  Future<void> _saveProducts(List<Product> list) => _prefs.setString(
+      'products', jsonEncode([for (final p in list) p.toJson()]));
 
-  Future<void> setPrice(String type, double price) async {
-    await _prefs.setString('prices', jsonEncode({...prices, type: price}));
+  /// Tur va collection bo'yicha mahsulotni topadi (katta-kichik harf farqsiz).
+  Product? findProduct(String type, String collection) {
+    final t = type.trim().toLowerCase(), c = collection.trim().toLowerCase();
+    return products
+        .where((p) =>
+            p.type.toLowerCase() == t && p.collection.toLowerCase() == c)
+        .firstOrNull;
+  }
+
+  /// Mahsulotni qo'shadi yoki o'zgartiradi.
+  Future<void> saveProduct(Product product) async {
+    final list = products;
+    final i = list.indexWhere((p) => p.id == product.id);
+    if (i < 0) {
+      list.add(product);
+    } else {
+      list[i] = product;
+    }
+    await _saveProducts(list);
+    notifyListeners();
+  }
+
+  Future<void> deleteProduct(String id) async {
+    await _saveProducts(products.where((p) => p.id != id).toList());
     notifyListeners();
   }
 

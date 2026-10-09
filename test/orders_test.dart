@@ -123,8 +123,6 @@ void main() {
     await tester.pumpAndSettle();
     // Narx "Narxlar"dan o'zi qo'yiladi.
     expect(find.text('150 000'), findsOneWidget);
-    await tester.enterText(
-        find.widgetWithText(TextField, 'Model / kod'), 'LIZBON-06');
     await tester.enterText(find.widgetWithText(TextFormField, 'eni'), '120');
     await tester.enterText(find.widgetWithText(TextFormField, "bo'yi"), '150');
     await tester.pump();
@@ -147,7 +145,7 @@ void main() {
 
     final o = state.orders.single;
     expect(o.area, closeTo(1.8, 1e-9));
-    expect(o.items.single.model, 'LIZBON-06');
+    expect(o.items.single.model, 'Standart');
     expect(o.total, 250000);
     expect(o.paid, 100000);
     expect(state.nextOrderNumber, 1002);

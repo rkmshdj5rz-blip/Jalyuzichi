@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app_state.dart';
 import '../data/orders.dart';
+import '../data/products.dart';
 import '../theme.dart';
 import '../widgets/money_field.dart';
 
@@ -315,7 +316,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         _ItemCard(
           key: ObjectKey(_items[i]),
           item: _items[i],
-          prices: AppScope.read(context).prices,
+          products: AppScope.read(context).products,
           onChanged: () => setState(() {}),
           onRemove: _items.length > 1
               ? () => setState(() => _items.removeAt(i))
@@ -637,13 +638,13 @@ class _ItemCard extends StatefulWidget {
   const _ItemCard({
     super.key,
     required this.item,
-    required this.prices,
+    required this.products,
     required this.onChanged,
     this.onRemove,
   });
 
   final OrderItem item;
-  final Map<String, double> prices;
+  final List<Product> products;
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
 
@@ -652,7 +653,6 @@ class _ItemCard extends StatefulWidget {
 }
 
 class _ItemCardState extends State<_ItemCard> {
-  late final _model = TextEditingController(text: widget.item.model);
   late final _price =
       TextEditingController(text: MoneyField.text(widget.item.pricePerM2));
 
@@ -660,26 +660,48 @@ class _ItemCardState extends State<_ItemCard> {
 
   @override
   void dispose() {
-    _model.dispose();
     _price.dispose();
     super.dispose();
   }
 
+  List<Product> _ofType(String? type) =>
+      [for (final p in widget.products) if (p.type == type) p];
+
+  void _setPrice(double v) {
+    item.pricePerM2 = v;
+    _price.text = MoneyField.text(v);
+  }
+
   void _setType(String? type) {
-    final oldDefault = widget.prices[item.type] ?? 0;
+    if (type == item.type) return;
     item.type = type;
-    // Narx qo'lda o'zgartirilmagan bo'lsa, yangi turning narxini qo'yamiz.
-    if (type != null &&
-        (item.pricePerM2 == 0 || item.pricePerM2 == oldDefault)) {
-      item.pricePerM2 = widget.prices[type] ?? 0;
-      _price.text = MoneyField.text(item.pricePerM2);
+    // Turda bitta collection bo'lsa, o'zi tanlanadi.
+    final list = _ofType(type);
+    if (list.length == 1) {
+      item.model = list.single.collection;
+      _setPrice(list.single.price);
+    } else {
+      item.model = '';
+      _setPrice(0);
     }
+    widget.onChanged();
+  }
+
+  void _setCollection(String? c) {
+    final p = _ofType(item.type).where((p) => p.collection == c).firstOrNull;
+    item.model = c ?? '';
+    if (p != null) _setPrice(p.price);
     widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
     final onChanged = widget.onChanged;
+    final types = {...typesOf(widget.products), ?item.type}.toList();
+    final collections = {
+      for (final p in _ofType(item.type)) p.collection,
+      if (item.model.isNotEmpty) item.model,
+    }.toList();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -693,12 +715,14 @@ class _ItemCardState extends State<_ItemCard> {
                     initialValue: item.type,
                     isExpanded: true,
                     borderRadius: BorderRadius.circular(14),
-                    decoration: const InputDecoration(
-                      hintText: 'Jalyuzi turi',
-                      prefixIcon: Icon(Icons.blinds_outlined),
+                    decoration: InputDecoration(
+                      hintText: types.isEmpty
+                          ? "Avval Narxlarda mahsulot qo'shing"
+                          : 'Jalyuzi turi',
+                      prefixIcon: const Icon(Icons.blinds_outlined),
                     ),
                     items: [
-                      for (final t in productTypes)
+                      for (final t in types)
                         DropdownMenuItem(value: t, child: Text(t)),
                     ],
                     onChanged: _setType,
@@ -713,27 +737,33 @@ class _ItemCardState extends State<_ItemCard> {
               ],
             ),
             const SizedBox(height: 10),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _model,
-                    textCapitalization: TextCapitalization.characters,
-                    onChanged: (v) {
-                      item.model = v.trim();
-                      onChanged();
-                    },
+                SizedBox(
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey('c-${item.type}'),
+                    initialValue: item.model.isEmpty ? null : item.model,
+                    isExpanded: true,
+                    borderRadius: BorderRadius.circular(14),
                     decoration: const InputDecoration(
-                      hintText: 'Model / kod',
-                      prefixIcon: Icon(Icons.qr_code_2_rounded),
+                      hintText: 'Collection',
+                      prefixIcon: Icon(Icons.layers_outlined),
                     ),
+                    items: [
+                      for (final c in collections)
+                        DropdownMenuItem(
+                            value: c, child: Text(c.isEmpty ? '—' : c)),
+                    ],
+                    onChanged: item.type == null ? null : _setCollection,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
+                const SizedBox(height: 10),
+                SizedBox(
                   child: MoneyField(
                     controller: _price,
                     label: '1 m² narxi',
+                    icon: Icons.sell_outlined,
                     suffix: "so'm",
                     onChanged: (v) {
                       item.pricePerM2 = v;

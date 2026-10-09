@@ -18,7 +18,7 @@ Pastki menyu:
 
 - **Buyurtmalar**: panel (muddati o'tgan, bugun/ertaga o'rnatiladigan, sanasiz, umumiy summa, to'langan, qarz, qoldiq), davr va filial filtri, holat filtrlari, qidiruv, tartib, buyurtma kartalari (montaj va to'lov tugmalari), Kassa jurnali. Buyurtmani ochib tahrirlash, o'chirish, mijozga qo'ng'iroq qilish mumkin.
 - **Yangi buyurtma**: filial, buyurtmachi, mahsulot turi, model/kod, 1 m² narxi (Narxlardan o'zi qo'yiladi), o'lchamlar (matndan ham), mijoz, manzil, montaj sanasi, chegirma, oldindan to'lov.
-- **Narxlar**: 1 m² narxlari va tez hisoblash.
+- **Narxlar**: mahsulot qo'shish (jalyuzi turi, collection, 1 m² narxi), turlar bo'yicha ro'yxat, tahrirlash va o'chirish. Buyurtmada tur va collection tanlanganda narx o'zi qo'yiladi.
 - **Filiallar** (yon menyu va Kabinetda): filial, do'kon, tsex yoki ombor qo'shish, manzil, telefon, mas'ul shaxs, ish vaqti, faol/to'xtatilgan, asosiy filial, o'chirish.
 - **Kabinet**: profil, shu oy natijasi, manzil, tungi rejim, chiqish.
 
