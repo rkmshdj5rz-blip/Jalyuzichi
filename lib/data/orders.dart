@@ -55,15 +55,40 @@ enum Side {
   final String label;
 }
 
-/// Karniz variantlari (rangi bilan).
+/// Karniz turi va rangi.
+class KarnizOption {
+  const KarnizOption(this.name, [this.color]);
+  final String name;
+
+  /// Rang (ARGB). Karnizsiz uchun null.
+  final int? color;
+}
+
+const karnizNone = 'Karnizsiz';
+
 const karnizOptions = [
-  'Karnizsiz',
-  'Oq',
-  'Kumush',
-  'Jigarrang',
-  'Qora',
-  'Oltin',
+  KarnizOption(karnizNone),
+  KarnizOption('Standart', 0xFFFFFFFF),
+  KarnizOption('Premium oq', 0xFFFFFFFF),
+  KarnizOption('Premium seriy', 0xFFA3A3A3),
+  KarnizOption('Premium mokriy', 0xFF5B5B5E),
+  KarnizOption('Premium tilla', 0xFFE9DD12),
+  KarnizOption('Premium biryuzoviy', 0xFF0E8FB0),
+  KarnizOption('Oq', 0xFFFFFFFF),
+  KarnizOption('Malochniy', 0xFFFFF7DA),
+  KarnizOption('Och seriy', 0xFFC2C2C2),
+  KarnizOption('Mokriy', 0xFF5B5B5E),
+  KarnizOption('Jigarrang', 0xFF6B2F12),
+  KarnizOption('Bronza', 0xFF7C6C3E),
+  KarnizOption('Oq (planka)', 0xFFFFFFFF),
+  KarnizOption('Malochniy (planka)', 0xFFFFF7DA),
+  KarnizOption('Och seriy (planka)', 0xFFC2C2C2),
+  KarnizOption('Mokriy (planka)', 0xFF5B5B5E),
+  KarnizOption('Jigarrang (planka)', 0xFF6B2F12),
 ];
+
+KarnizOption? findKarniz(String name) =>
+    karnizOptions.where((k) => k.name == name).firstOrNull;
 
 class OrderSize {
   OrderSize({
@@ -72,7 +97,7 @@ class OrderSize {
     this.count = 1,
     this.control = Control.chain,
     this.side = Side.left,
-    this.karniz = 'Karnizsiz',
+    this.karniz = karnizNone,
   });
 
   double width;
@@ -87,11 +112,11 @@ class OrderSize {
   /// Kvadrat metr (barcha donalar bilan).
   double get area => width * height / 10000 * count;
 
-  /// Sozlamalar qisqacha: "Zanjir · Chap · Oq karniz".
+  /// Sozlamalar qisqacha: "Zanjir · Chap · Karniz: Oq".
   String get optionsLabel => [
         control.label,
         if (control != Control.none) side.label,
-        karniz == 'Karnizsiz' ? 'Karnizsiz' : '$karniz karniz',
+        karniz == karnizNone ? karnizNone : 'Karniz: $karniz',
       ].join(' · ');
 
   void copyOptionsFrom(OrderSize o) {
@@ -115,7 +140,7 @@ class OrderSize {
         count: j['n'] as int,
         control: Control.values.asNameMap()[j['ctl']] ?? Control.chain,
         side: Side.values.asNameMap()[j['side']] ?? Side.left,
-        karniz: j['karniz'] as String? ?? 'Karnizsiz',
+        karniz: j['karniz'] as String? ?? karnizNone,
       );
 }
 

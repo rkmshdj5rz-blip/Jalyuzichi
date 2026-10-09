@@ -52,16 +52,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('ctl-motor')));
     await tester.tap(find.byKey(const ValueKey('side-right')));
+    await tester.tap(find.byKey(const ValueKey('karniz-field')));
+    await tester.pumpAndSettle();
+    expect(find.text('Premium biryuzoviy'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('karniz-Oq')));
+    await tester.pumpAndSettle();
     await tester.pump();
     await tester.tap(find.text('Tayyor'));
     await tester.pumpAndSettle();
-    expect(find.text("Motor · O'ng · Oq karniz"), findsOneWidget);
+    expect(find.text("Motor · O'ng · Karniz: Oq"), findsOneWidget);
 
     // Yangi o'lcham oldingi sozlamalarni oladi.
     await tester.tap(find.text("O'lcham"));
     await tester.pumpAndSettle();
-    expect(find.text("Motor · O'ng · Oq karniz"), findsNWidgets(2));
+    expect(find.text("Motor · O'ng · Karniz: Oq"), findsNWidgets(2));
 
     final s = OrderSize.fromJson(
         (OrderSize(width: 1, height: 1)..control = Control.motor).toJson());
