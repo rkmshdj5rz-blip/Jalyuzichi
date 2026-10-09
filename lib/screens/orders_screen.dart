@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/order_actions.dart';
 import '../widgets/order_card.dart';
 import 'new_order_screen.dart';
+import 'receipt_screen.dart';
 
 void openNewOrder(BuildContext context) {
   Navigator.of(context).push(
@@ -752,6 +753,12 @@ class _CashJournal extends StatelessWidget {
             if (period.contains(p.date, now)) (order: o, payment: p),
     ]..sort((a, b) => b.payment.date.compareTo(a.payment.date));
     final total = rows.fold<double>(0, (a, r) => a + r.payment.amount);
+    double byMethod(PayMethod m) => rows
+        .where((r) => r.payment.method == m)
+        .fold<double>(0, (a, r) => a + r.payment.amount);
+    final usd = rows
+        .where((r) => r.payment.method == PayMethod.dollar)
+        .fold<double>(0, (a, r) => a + (r.payment.usd ?? 0));
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -777,6 +784,37 @@ class _CashJournal extends StatelessWidget {
                         fontWeight: FontWeight.w800)),
                 Text("${rows.length} ta to'lov",
                     style: const TextStyle(color: AppColors.onBrand)),
+                if (rows.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      for (final m in PayMethod.values)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(m.label,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.onBrand
+                                          .withValues(alpha: 0.7))),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                    m == PayMethod.dollar
+                                        ? '\$${formatNumber(usd)}'
+                                        : formatNumber(byMethod(m)),
+                                    style: const TextStyle(
+                                        color: AppColors.onBrand,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -804,7 +842,7 @@ class _CashJournal extends StatelessWidget {
                       title: Text(rows[i].order.customerLabel,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                       subtitle: Text(
-                          '№ ${rows[i].order.number} · ${formatDay(rows[i].payment.date)}'),
+                          '№ ${rows[i].order.number} · ${formatDay(rows[i].payment.date)} · ${rows[i].payment.method.lower}'),
                       trailing: Text('+${formatMoney(rows[i].payment.amount)}',
                           style: const TextStyle(
                               fontWeight: FontWeight.w700, color: _green)),
@@ -1029,20 +1067,46 @@ class OrderDetailScreen extends StatelessWidget {
                 children: [
                   for (final p in order.payments)
                     ListTile(
-                      leading: const Icon(Icons.payments_outlined),
+                      contentPadding: const EdgeInsets.only(left: 16, right: 4),
+                      leading: Icon(switch (p.method) {
+                        PayMethod.cash => Icons.payments_outlined,
+                        PayMethod.card => Icons.credit_card_rounded,
+                        PayMethod.dollar => Icons.attach_money_rounded,
+                      }),
                       title: Text(formatMoney(p.amount),
                           style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text(formatDate(p.date)),
-                      trailing: IconButton(
-                        tooltip: "To'lovni o'chirish",
-                        icon: const Icon(Icons.close_rounded, size: 20),
-                        onPressed: () async {
-                          final ok = await _confirm(context,
-                              "To'lovni o'chirasizmi?", formatMoney(p.amount));
-                          if (!ok) return;
-                          order.payments.remove(p);
-                          await state.updateOrder(order);
-                        },
+                      subtitle: Text([
+                        formatDate(p.date),
+                        p.method.label,
+                        if (p.method == PayMethod.dollar && p.usd != null)
+                          '\$${formatNumber(p.usd!)}',
+                      ].join(' · ')),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Chek',
+                            icon: const Icon(Icons.receipt_long_outlined,
+                                size: 20),
+                            onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) => ReceiptScreen(
+                                        number: order.number, payment: p))),
+                          ),
+                          IconButton(
+                            tooltip: "To'lovni o'chirish",
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            onPressed: () async {
+                              final ok = await _confirm(
+                                  context,
+                                  "To'lovni o'chirasizmi?",
+                                  formatMoney(p.amount));
+                              if (!ok) return;
+                              order.payments.remove(p);
+                              await state.updateOrder(order);
+                            },
+                          ),
+                        ],
                       ),
                     ),
                 ],

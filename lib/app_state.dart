@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -216,6 +217,41 @@ class AppState extends ChangeNotifier {
   Future<void> deleteProduct(String id) async {
     await _saveProducts(products.where((p) => p.id != id).toList());
     notifyListeners();
+  }
+
+  /// Do'kon yoki brend nomi (chekda chiqadi).
+  String get shopName => _prefs.getString('shopName') ?? '';
+
+  /// Do'kon logosi (rasm baytlari), bo'lmasa null.
+  Uint8List? get shopLogo {
+    final raw = _prefs.getString('shopLogo');
+    return raw == null ? null : base64Decode(raw);
+  }
+
+  /// Chekning pastida chiqadigan telefon.
+  String get shopPhone => _prefs.getString('shopPhone') ?? '';
+
+  Future<void> setShop({
+    required String name,
+    required String phone,
+    Uint8List? logo,
+    bool removeLogo = false,
+  }) async {
+    await _prefs.setString('shopName', name);
+    await _prefs.setString('shopPhone', phone);
+    if (logo != null) {
+      await _prefs.setString('shopLogo', base64Encode(logo));
+    } else if (removeLogo) {
+      await _prefs.remove('shopLogo');
+    }
+    notifyListeners();
+  }
+
+  /// Oxirgi ishlatilgan dollar kursi.
+  double get usdRate => _prefs.getDouble('usdRate') ?? 12800;
+
+  Future<void> setUsdRate(double rate) async {
+    if (rate > 0) await _prefs.setDouble('usdRate', rate);
   }
 
   /// Keyingi buyurtma raqami.

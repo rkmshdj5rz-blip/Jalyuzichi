@@ -6,6 +6,8 @@ import '../data/orders.dart';
 import '../data/products.dart';
 import '../theme.dart';
 import '../widgets/money_field.dart';
+import '../widgets/payment_input.dart';
+import 'receipt_screen.dart';
 
 /// Yangi buyurtma kiritish: 1-qadam mahsulot va o'lchamlar,
 /// 2-qadam mijoz, o'rnatish va to'lov ma'lumotlari.
@@ -33,7 +35,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   /// Chegirma foizda (true) yoki so'mda (false) kiritiladi.
   bool _discountPercent = true;
-  final _prepay = TextEditingController();
+  late final _prepay = PaymentDraft(rate: AppScope.read(context).usdRate);
   DateTime? _installDate;
   bool _saving = false;
 
@@ -71,7 +73,6 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     _address.dispose();
     _note.dispose();
     _discount.dispose();
-    _prepay.dispose();
     super.dispose();
   }
 
@@ -86,7 +87,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   double get _discountValue => _discountPercent
       ? (_itemsSum * _discountInput / 100).roundToDouble()
       : parseMoney(_discount.text);
-  double get _prepayValue => parseMoney(_prepay.text);
+  double get _prepayValue => _prepay.amount;
   double get _total =>
       (_itemsSum - _discountValue).clamp(0, double.infinity).toDouble();
 
@@ -133,15 +134,25 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       installDate: _installDate,
       discount: _discountValue,
       payments: e?.payments ??
-          [if (_prepayValue > 0) Payment(amount: _prepayValue, date: now)],
+          [if (_prepayValue > 0) _prepay.toPayment(now)],
       installedAt: e?.installedAt,
     );
     if (e != null) {
       await state.updateOrder(order);
     } else {
       await state.addOrder(order);
+      if (_prepay.method == PayMethod.dollar) {
+        await state.setUsdRate(_prepay.rate);
+      }
     }
     if (!mounted) return;
+    // Avans olingan bo'lsa, darhol chek ko'rsatiladi.
+    if (e == null && order.payments.isNotEmpty) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (_) => ReceiptScreen(
+              number: order.number, payment: order.payments.first)));
+      return;
+    }
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -473,11 +484,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             ),
             if (!_isEdit) ...[
               const SizedBox(height: 10),
-              MoneyField(
-                controller: _prepay,
-                label: "Oldindan to'lov (zaklad)",
-                icon: Icons.payments_outlined,
-                onChanged: (_) => setState(() {}),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8, left: 2),
+                child: Text("Oldindan to'lov (avans)",
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.lightMuted)),
+              ),
+              PaymentInput(
+                draft: _prepay,
+                label: 'Avans',
+                onChanged: () => setState(() {}),
               ),
             ],
           ],
@@ -503,7 +521,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   '− ${formatMoney(_discountValue)}'),
             _kv('Umumiy summa', formatMoney(_total), bold: true),
             if (!_isEdit && _prepayValue > 0) ...[
-              _kv("Oldindan to'lov", formatMoney(_prepayValue)),
+              _kv("Avans (${_prepay.method.lower})", formatMoney(_prepayValue)),
               _kv('Qoldiq', formatMoney(_total - _prepayValue), bold: true),
             ],
           ],

@@ -5,6 +5,7 @@ import 'package:jalyuzichi/data/orders.dart';
 import 'package:jalyuzichi/data/sample_orders.dart';
 import 'package:jalyuzichi/main.dart';
 import 'package:jalyuzichi/widgets/money_field.dart';
+import 'package:jalyuzichi/widgets/payment_input.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -62,6 +63,17 @@ void main() {
     final sorted = sortOrders(orders, OrderSort.auto, now);
     if (stats.overdue > 0) expect(sorted.first.isOverdue(now), isTrue);
     expect(sorted.last.isInstalled, isTrue);
+  });
+
+  test("dollarda to'lov so'mga kurs bo'yicha o'tadi", () {
+    final d = PaymentDraft(rate: 12800)
+      ..method = PayMethod.dollar
+      ..usd = 20;
+    expect(d.amount, 256000);
+    final p = Payment.fromJson(d.toPayment(DateTime(2026, 10, 9)).toJson());
+    expect(p.method, PayMethod.dollar);
+    expect(p.usd, 20);
+    expect(p.amount, 256000);
   });
 
   test("to'lov qo'shilgach qoldiq kamayadi", () {
@@ -146,10 +158,16 @@ void main() {
     await tester.pump();
     await tester.enterText(find.widgetWithText(TextField, 'Chegirma'), '20000');
     await tester.enterText(
-        find.widgetWithText(TextField, "Oldindan to'lov (zaklad)"), '100000');
+        find.widgetWithText(TextField, 'Avans'), '100000');
     await tester.pump();
     expect(find.text("250 000 so'm"), findsWidgets);
     await tester.tap(find.text('Buyurtmani saqlash'));
+    await tester.pumpAndSettle();
+
+    // Avans uchun chek chiqadi.
+    expect(find.text('AVANS CHEKI'), findsOneWidget);
+    expect(find.text('Telegramga yuborish'), findsOneWidget);
+    await tester.tap(find.byTooltip('Yopish'));
     await tester.pumpAndSettle();
 
     final o = state.orders.single;

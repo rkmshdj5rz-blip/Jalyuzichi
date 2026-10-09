@@ -97,19 +97,53 @@ class OrderItem {
       );
 }
 
-/// Kassaga tushgan to'lov.
+/// To'lov usuli.
+enum PayMethod {
+  cash('Naqd', 'naqd'),
+  card('Karta', 'karta'),
+  dollar('Dollar', 'dollar');
+
+  const PayMethod(this.label, this.lower);
+  final String label;
+  final String lower;
+}
+
+/// Kassaga tushgan to'lov. [amount] har doim so'mda; dollarda to'langanda
+/// [usd] va [rate] ham saqlanadi.
 class Payment {
-  Payment({required this.amount, required this.date});
+  Payment({
+    required this.amount,
+    required this.date,
+    this.method = PayMethod.cash,
+    this.usd,
+    this.rate,
+  });
 
   final double amount;
   final DateTime date;
+  final PayMethod method;
+  final double? usd;
+  final double? rate;
 
-  Map<String, dynamic> toJson() =>
-      {'amount': amount, 'date': date.toIso8601String()};
+  /// "250 000 so'm" yoki "$20 (kurs 12 800)".
+  String get display => method == PayMethod.dollar && usd != null
+      ? '\$${formatNumber(usd!)} · kurs ${formatNumber(rate ?? 0)}'
+      : formatMoney(amount);
+
+  Map<String, dynamic> toJson() => {
+        'amount': amount,
+        'date': date.toIso8601String(),
+        'method': method.name,
+        if (usd != null) 'usd': usd,
+        if (rate != null) 'rate': rate,
+      };
 
   factory Payment.fromJson(Map<String, dynamic> j) => Payment(
         amount: (j['amount'] as num).toDouble(),
         date: DateTime.parse(j['date'] as String),
+        method: PayMethod.values.asNameMap()[j['method']] ?? PayMethod.cash,
+        usd: (j['usd'] as num?)?.toDouble(),
+        rate: (j['rate'] as num?)?.toDouble(),
       );
 }
 

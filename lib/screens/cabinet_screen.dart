@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets/address_sheet.dart';
 import 'branches_screen.dart';
 import 'country_screen.dart';
+import 'shop_screen.dart';
 import 'profile_screen.dart';
 
 const supportPhone = '+998 71 200 00 00';
@@ -109,6 +110,14 @@ class CabinetScreen extends StatelessWidget {
           Card(
             child: Column(
               children: [
+                _Item(
+                  icon: Icons.receipt_long_outlined,
+                  title: "Do'kon va chek",
+                  value: state.shopName.isEmpty ? 'Kiritilmagan' : state.shopName,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const ShopScreen())),
+                ),
+                _divider,
                 _Item(
                   icon: Icons.store_outlined,
                   title: 'Filiallar',
