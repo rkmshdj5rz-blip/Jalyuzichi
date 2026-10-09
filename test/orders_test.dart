@@ -135,6 +135,15 @@ void main() {
         find.widgetWithText(TextField, 'Ism familiya'), 'Aziz');
     await tester.enterText(
         find.widgetWithText(TextField, '+998 90 123 45 67'), '+998901112233');
+    // Foizda: 10% → 27 000 so'm chegirma.
+    await tester.enterText(find.widgetWithText(TextField, 'Chegirma'), '10');
+    await tester.pump();
+    expect(find.text("243 000 so'm"), findsWidgets);
+    // So'mda.
+    await tester.ensureVisible(find.byKey(const ValueKey('discount-sum')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('discount-sum')));
+    await tester.pump();
     await tester.enterText(find.widgetWithText(TextField, 'Chegirma'), '20000');
     await tester.enterText(
         find.widgetWithText(TextField, "Oldindan to'lov (zaklad)"), '100000');

@@ -30,6 +30,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   final _address = TextEditingController();
   final _note = TextEditingController();
   final _discount = TextEditingController();
+
+  /// Chegirma foizda (true) yoki so'mda (false) kiritiladi.
+  bool _discountPercent = true;
   final _prepay = TextEditingController();
   DateTime? _installDate;
   bool _saving = false;
@@ -51,6 +54,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       _address.text = e.address;
       _note.text = e.note;
       _installDate = e.installDate;
+      // Saqlangan chegirma so'mda, tahrirda ham so'mda ko'rsatamiz.
+      _discountPercent = e.discount == 0;
       _discount.text = MoneyField.text(e.discount);
       return;
     }
@@ -73,7 +78,14 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   double get _area => _items.fold(0, (a, i) => a + i.area);
   int get _sizeCount => _items.fold(0, (a, i) => a + i.sizeCount);
   double get _itemsSum => _items.fold(0, (a, i) => a + i.sum);
-  double get _discountValue => parseMoney(_discount.text);
+  double get _discountInput =>
+      double.tryParse(_discount.text.replaceAll(' ', '').replaceAll(',', '.')) ??
+      0;
+
+  /// Chegirma so'mda (foiz bo'lsa mahsulotlar summasidan hisoblanadi).
+  double get _discountValue => _discountPercent
+      ? (_itemsSum * _discountInput / 100).roundToDouble()
+      : parseMoney(_discount.text);
   double get _prepayValue => parseMoney(_prepay.text);
   double get _total =>
       (_itemsSum - _discountValue).clamp(0, double.infinity).toDouble();
@@ -94,6 +106,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       if (_phone.text.replaceAll(RegExp(r'\D'), '').length < 9) {
         return 'Telefon raqamni kiriting';
       }
+    }
+    if (_discountPercent && _discountInput > 100) {
+      return "Chegirma 100% dan ko'p bo'lmaydi";
     }
     if (_discountValue > _itemsSum) return "Chegirma summadan ko'p";
     if (_prepayValue > _total) return "Oldindan to'lov summadan ko'p";
@@ -420,11 +435,41 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         title: "To'lov",
         child: Column(
           children: [
-            MoneyField(
-              controller: _discount,
-              label: 'Chegirma',
-              icon: Icons.percent_rounded,
-              onChanged: (_) => setState(() {}),
+            Row(
+              children: [
+                Expanded(
+                  child: _discountPercent
+                      ? TextField(
+                          controller: _discount,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d{0,3}([.,]\d{0,2})?')),
+                          ],
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            labelText: 'Chegirma',
+                            prefixIcon: Icon(Icons.discount_outlined),
+                            suffixText: '%',
+                          ),
+                        )
+                      : MoneyField(
+                          controller: _discount,
+                          label: 'Chegirma',
+                          icon: Icons.discount_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                _UnitSwitch(
+                  percent: _discountPercent,
+                  onChanged: (v) => setState(() {
+                    _discountPercent = v;
+                    _discount.clear();
+                  }),
+                ),
+              ],
             ),
             if (!_isEdit) ...[
               const SizedBox(height: 10),
@@ -451,7 +496,11 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             const Divider(height: 20),
             _kv('Mahsulotlar', formatMoney(_itemsSum)),
             if (_discountValue > 0)
-              _kv('Chegirma', '− ${formatMoney(_discountValue)}'),
+              _kv(
+                  _discountPercent
+                      ? 'Chegirma (${_discount.text.trim()}%)'
+                      : 'Chegirma',
+                  '− ${formatMoney(_discountValue)}'),
             _kv('Umumiy summa', formatMoney(_total), bold: true),
             if (!_isEdit && _prepayValue > 0) ...[
               _kv("Oldindan to'lov", formatMoney(_prepayValue)),
@@ -998,6 +1047,52 @@ class _FromTextDialogState extends State<_FromTextDialog> {
           child: const Text("Qo'shish"),
         ),
       ],
+    );
+  }
+}
+
+/// Chegirma birligi: % yoki so'm.
+class _UnitSwitch extends StatelessWidget {
+  const _UnitSwitch({required this.percent, required this.onChanged});
+
+  final bool percent;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = Theme.of(context).inputDecorationTheme.fillColor;
+    Widget seg(String label, bool value) {
+      final on = percent == value;
+      return GestureDetector(
+        key: ValueKey('discount-${value ? 'percent' : 'sum'}'),
+        onTap: () => onChanged(value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 52,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? AppColors.brand : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: on ? AppColors.onBrand : AppColors.lightMuted)),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [seg('%', true), seg("so'm", false)],
+      ),
     );
   }
 }
