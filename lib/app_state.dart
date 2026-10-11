@@ -56,10 +56,14 @@ class AppState extends ChangeNotifier {
   /// Telefonda saqlangan buyurtmalar, eng yangisi birinchi.
   List<Order> get orders {
     final raw = _prefs.getStringList('orders') ?? const [];
-    return [
-      for (final o in raw.reversed)
-        Order.fromJson(jsonDecode(o) as Map<String, dynamic>),
-    ];
+    final list = <Order>[];
+    for (final o in raw.reversed) {
+      // Bitta buzilgan yozuv qolgan buyurtmalarni yashirmasin.
+      try {
+        list.add(Order.fromJson(jsonDecode(o) as Map<String, dynamic>));
+      } catch (_) {}
+    }
+    return list;
   }
 
   /// Buyurtmani yangilaydi (to'lov qo'shish, o'rnatildi deb belgilash).
