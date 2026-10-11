@@ -178,7 +178,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               autofocus: widget.focusSearch,
               onChanged: (v) => setState(() => _query = v),
               decoration: const InputDecoration(
-                hintText: 'Qidirish: mijoz, telefon, №raqam, kod',
+                hintText: "Mijoz, telefon, № yoki kod",
                 prefixIcon: Icon(Icons.search_rounded),
               ),
             ),

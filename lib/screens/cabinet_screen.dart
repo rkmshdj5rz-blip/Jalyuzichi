@@ -94,7 +94,7 @@ class CabinetScreen extends StatelessWidget {
                   onTap: onOpenOrders),
               const SizedBox(width: 10),
               _Metric(
-                  label: 'Kassaga tushdi',
+                  label: 'Tushum',
                   value: formatMoney(income),
                   onTap: onOpenOrders),
               const SizedBox(width: 10),

@@ -24,8 +24,8 @@ class OrderCard extends StatelessWidget {
     final (statusText, statusColor) = order.isInstalled
         ? ("O'rnatilgan", _green)
         : order.isOverdue(now)
-            ? ("Muddati o'tgan · ${-days!} kun", _red)
-            : ('Montaj kutilmoqda', _amber);
+        ? ("Muddati o'tgan · ${-days!} kun", _red)
+        : ('Montaj kutilmoqda', _amber);
     final banner = order.isInstalled
         ? null
         : switch (days) {
@@ -47,16 +47,21 @@ class OrderCard extends StatelessWidget {
             if (banner != null)
               Container(
                 color: AppColors.brand,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Icon(banner.$2, size: 18, color: AppColors.onBrand),
                     const SizedBox(width: 8),
-                    Text(banner.$1,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.onBrand)),
+                    Text(
+                      banner.$1,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.onBrand,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -72,33 +77,45 @@ class OrderCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('№ ${order.number}',
-                                style: const TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w800)),
+                            Text(
+                              '№ ${order.number}',
+                              style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                             const SizedBox(height: 2),
                             Text(
-                                '${formatDay(order.createdAt)} · ${order.branch}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.lightMuted)),
+                              '${formatDay(order.createdAt)} · ${order.branch}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.lightMuted,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                          child: _Pill(text: statusText, color: statusColor)),
+                        child: _Pill(text: statusText, color: statusColor),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(order.customerLabel,
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
+                  Text(
+                    order.customerLabel,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   if (order.customerPhone.isNotEmpty)
-                    Text(order.customerPhone,
-                        style: const TextStyle(color: AppColors.lightMuted)),
+                    Text(
+                      order.customerPhone,
+                      style: const TextStyle(color: AppColors.lightMuted),
+                    ),
                   const SizedBox(height: 10),
                   for (final i in order.items)
                     Padding(
@@ -108,14 +125,15 @@ class OrderCard extends StatelessWidget {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           _Tag(
-                              text: [
-                            (i.type ?? '').toUpperCase(),
-                            if (i.model.isNotEmpty) i.model.toUpperCase(),
-                          ].join(' · ')),
+                            text: [
+                              (i.type ?? '').toUpperCase(),
+                              if (i.model.isNotEmpty) i.model.toUpperCase(),
+                            ].join(' · '),
+                          ),
                           Text(
-                              '${i.sizeCount} dona · ${formatArea(i.area)} m²',
-                              style: const TextStyle(
-                                  color: AppColors.lightMuted)),
+                            '${i.sizeCount} dona · ${formatArea(i.area)} m²',
+                            style: const TextStyle(color: AppColors.lightMuted),
+                          ),
                         ],
                       ),
                     ),
@@ -124,17 +142,21 @@ class OrderCard extends StatelessWidget {
                     children: [
                       _Money('Umumiy summa', order.total, null),
                       _Money("To'langan", order.paid, _green),
-                      _Money('Qoldiq', order.remaining,
-                          order.remaining > 0 ? _amber : _green),
+                      _Money(
+                        'Qoldiq',
+                        order.remaining,
+                        order.remaining > 0 ? _amber : _green,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
                   _PaidBar(order: order),
                   const SizedBox(height: 12),
+                  _MontajLabel(order: order),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(child: _MontajLabel(order: order)),
-                      const SizedBox(width: 8),
+                      const Spacer(),
                       _SmallButton(
                         icon: Icons.event_outlined,
                         label: 'Montaj',
@@ -174,11 +196,16 @@ class _Pill extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -196,11 +223,14 @@ class _Tag extends StatelessWidget {
         color: Theme.of(context).inputDecorationTheme.fillColor,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(text,
-          style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
+      ),
     );
   }
 }
@@ -215,23 +245,30 @@ class _Money extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style:
-                  const TextStyle(fontSize: 12, color: AppColors.lightMuted)),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(formatMoney(value),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.lightMuted),
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                formatMoney(value),
                 style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: color,
-                    fontFeatures: const [FontFeature.tabularFigures()])),
-          ),
-        ],
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -248,8 +285,8 @@ class _PaidBar extends StatelessWidget {
     final (text, color) = order.isPaid
         ? ("To'langan", _green)
         : order.paid == 0
-            ? ("To'lanmagan", _red)
-            : ("Qisman to'langan", _amber);
+        ? ("To'lanmagan", _red)
+        : ("Qisman to'langan", _amber);
     return Row(
       children: [
         Expanded(
@@ -264,9 +301,14 @@ class _PaidBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        Text('$text · ${(ratio * 100).round()}%',
-            style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+        Text(
+          '$text · ${(ratio * 100).round()}%',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
       ],
     );
   }
@@ -282,17 +324,22 @@ class _MontajLabel extends StatelessWidget {
     final (text, color) = order.isInstalled
         ? ("O'rnatildi · ${formatDay(order.installedAt!)}", _green)
         : order.installDate == null
-            ? ('Montaj sanasi yo\'q', AppColors.lightMuted)
-            : ('Montaj · ${formatDay(order.installDate!)}', _blue);
+        ? ('Montaj sanasi yo\'q', AppColors.lightMuted)
+        : ('Montaj · ${formatDay(order.installDate!)}', _blue);
     return Row(
       children: [
         Icon(Icons.handyman_outlined, size: 16, color: color),
         const SizedBox(width: 6),
         Flexible(
-          child: Text(text,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ),
       ],
     );
@@ -300,8 +347,11 @@ class _MontajLabel extends StatelessWidget {
 }
 
 class _SmallButton extends StatelessWidget {
-  const _SmallButton(
-      {required this.icon, required this.label, required this.onTap});
+  const _SmallButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;

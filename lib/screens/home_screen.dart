@@ -92,7 +92,13 @@ class _HomeScreenState extends State<HomeScreen> {
         2 => const PricesScreen(),
         _ => CabinetScreen(onOpenOrders: () => _openOrders()),
       },
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+              top: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant)),
+        ),
+        child: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() {
           if (i == 1 && _tab != 1) {
@@ -102,12 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           _tab = i;
         }),
-        indicatorColor: AppColors.brand.withValues(alpha: 0.6),
         destinations: [
           for (final t in _tabs)
             NavigationDestination(
                 icon: Icon(t.$1), selectedIcon: Icon(t.$2), label: t.$3),
         ],
+      ),
       ),
     );
   }
@@ -293,7 +299,7 @@ class _HomeBody extends StatelessWidget {
           readOnly: true,
           onTap: () => openOrders(search: true),
           decoration: const InputDecoration(
-            hintText: 'Buyurtma qidirish: mijoz, telefon, №',
+            hintText: "Mijoz, telefon yoki № bo'yicha",
             prefixIcon: Icon(Icons.search_rounded),
           ),
         ),
