@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
-import '../screens/country_screen.dart';
+import '../data/orders.dart';
+import '../screens/branches_screen.dart';
+import '../screens/cabinet_screen.dart';
+import '../screens/orders_screen.dart';
 import '../screens/profile_screen.dart';
 import '../theme.dart';
 import 'app_logo.dart';
 
+/// Yon menyu. [onTab] pastki menyu bo'limini ochadi.
 class SideMenu extends StatelessWidget {
-  const SideMenu({super.key});
+  const SideMenu({super.key, required this.onTab, required this.onOrders});
 
-  void _soon(BuildContext context, String what) {
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("$what bo'limi tez orada qo'shiladi")),
-    );
-  }
+  final ValueChanged<int> onTab;
+  final void Function({OrdersSection section}) onOrders;
 
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final dark = state.themeMode == ThemeMode.dark;
 
-    Widget item(IconData icon, String title, {VoidCallback? onTap, bool selected = false}) {
+    Widget item(IconData icon, String title, VoidCallback onTap,
+        {bool selected = false}) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         child: ListTile(
@@ -32,7 +33,10 @@ class SideMenu extends StatelessWidget {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           leading: Icon(icon),
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-          onTap: onTap ?? () => _soon(context, title),
+          onTap: () {
+            Navigator.of(context).pop();
+            onTap();
+          },
         ),
       );
     }
@@ -53,10 +57,12 @@ class SideMenu extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(state.name.isEmpty ? 'Mehmon' : state.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontSize: 17, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 2),
-                        Text(state.phone,
+                        Text(formatPhone(state.phone),
                             style: const TextStyle(color: AppColors.lightMuted)),
                       ],
                     ),
@@ -69,19 +75,24 @@ class SideMenu extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 children: [
-                  item(Icons.home_rounded, 'Bosh sahifa',
-                      selected: true, onTap: () => Navigator.of(context).pop()),
-                  item(Icons.person_outline_rounded, 'Profilni tahrirlash',
-                      onTap: () {
-                    Navigator.of(context).pop();
+                  item(Icons.home_rounded, 'Bosh sahifa', () {},
+                      selected: true),
+                  item(Icons.receipt_long_outlined, 'Buyurtmalar',
+                      () => onOrders()),
+                  item(Icons.account_balance_wallet_outlined, 'Kassa jurnali',
+                      () => onOrders(section: OrdersSection.cash)),
+                  item(Icons.local_shipping_outlined, 'Tsexdan yuklar',
+                      () => onOrders(section: OrdersSection.workshop)),
+                  item(Icons.store_outlined, 'Filiallar', () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const BranchesScreen()));
+                  }),
+                  item(Icons.sell_outlined, 'Narxlar', () => onTab(2)),
+                  item(Icons.person_outline_rounded, 'Kabinet', () => onTab(3)),
+                  item(Icons.edit_outlined, 'Profilni tahrirlash', () {
                     Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const ProfileScreen()));
                   }),
-                  item(Icons.language_rounded, 'Til'),
-                  item(Icons.account_balance_wallet_outlined, "To'lovlar"),
-                  item(Icons.local_offer_outlined, 'Promokod'),
-                  item(Icons.support_agent_rounded, "Bog'lanish"),
-                  item(Icons.tune_rounded, 'Sozlamalar'),
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
@@ -95,8 +106,6 @@ class SideMenu extends StatelessWidget {
                       onChanged: state.setDark,
                     ),
                   ),
-                  item(Icons.report_gmailerrorred_rounded,
-                      'Muammo haqida xabar'),
                 ],
               ),
             ),
@@ -108,14 +117,7 @@ class SideMenu extends StatelessWidget {
                 leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
                 title: const Text('Chiqish',
                     style: TextStyle(color: Colors.redAccent)),
-                onTap: () async {
-                  final nav = Navigator.of(context);
-                  await state.logout();
-                  nav.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const CountryScreen()),
-                    (_) => false,
-                  );
-                },
+                onTap: () => confirmLogout(context),
               ),
             ),
           ],

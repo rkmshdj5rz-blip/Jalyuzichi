@@ -12,9 +12,21 @@ Kirish ketma-ketligi:
 4. Ro'yxatdan o'tish (ism)
 5. Sinxronlash (ma'lumotlarni yuklash)
 6. Manzil kiritish (viloyat, tuman, xaritadan belgilash)
-7. Bosh sahifa: bannerlar, xizmatlar bo'limlari, yon menyu, tungi rejim
+7. Bosh sahifa: bannerlar, bugungi montajlar va qarzlar, bo'limlar, yaqin montajlar, eslatmalar (qo'ng'iroqcha), yon menyu
 
-Logo vaqtinchalik (`lib/widgets/app_logo.dart`), ranglar `lib/theme.dart` da.
+Pastki menyu:
+
+- **Buyurtmalar**: panel (muddati o'tgan, bugun/ertaga o'rnatiladigan, sanasiz, umumiy summa, to'langan, qarz, qoldiq), davr va filial filtri, holat filtrlari, qidiruv, tartib, buyurtma kartalari (montaj va to'lov tugmalari), Kassa jurnali. Buyurtmani ochib tahrirlash, o'chirish, mijozga qo'ng'iroq qilish mumkin.
+- **Yangi buyurtma**: filial, mahsulot turi, lenta kodi, 1 m² narxi (Narxlardan o'zi qo'yiladi), o'lchamlar (matndan ham), mijoz, manzil, montaj sanasi, chegirma, oldindan to'lov.
+- **Lenta kodi va o'lcham sozlamalari**: lenta kodi qidiruvli ro'yxatdan tanlanadi (narxi bilan). Har bir o'lcham yonidagi sozlamalar tugmasi: boshqaruv (Bo'sh, Zanjir, Motor, Qo'l), tomon (Chap, O'ng, Chap+O'ng), karniz turi va rangi (18 xil, to'r ko'rinishida tanlanadi); "Hammasiga" bilan barcha o'lchamlarga qo'llanadi.
+- **Narxlar**: mahsulot qo'shish (jalyuzi turi, lenta kodi, 1 m² narxi), turlar bo'yicha ro'yxat, tahrirlash va o'chirish. Buyurtmada tur va lenta kodi tanlanganda narx o'zi qo'yiladi.
+- **Filiallar** (yon menyu va Kabinetda): filial, do'kon, tsex yoki ombor qo'shish, manzil, telefon, mas'ul shaxs, ish vaqti, faol/to'xtatilgan, asosiy filial, o'chirish.
+- **To'lov usuli va chek**: avans va to'lovlar naqd, karta yoki dollarda (kurs bilan). Avansli buyurtma saqlanganda do'kon nomi va logosi bilan bezatilgan chek chiqadi: rasm qilib saqlash yoki Telegramga yuborish. Do'kon nomi va logo ro'yxatdan o'tishda kiritiladi, Kabinet > "Do'kon va chek"da o'zgartiriladi.
+- **Kabinet**: profil, shu oy natijasi, manzil, tungi rejim, chiqish.
+
+Ma'lumotlar hozircha telefonning o'zida saqlanadi; hisobdan chiqilganda buyurtmalar va narxlar o'chmaydi.
+
+Logo `lib/widgets/app_logo.dart` da, ranglar `lib/theme.dart` da.
 
 ## Ishga tushirish
 
@@ -33,5 +45,6 @@ Testlar: `flutter test`.
   Gateway kaliti faqat serverda turadi; ilovada `lib/services/auth_service.dart`
   dagi `MockAuthService` server bilan ishlaydigan xizmatga almashtiriladi.
 - Haqiqiy xarita (Google yoki Yandex)
-- Buyurtmalar, narxlar, dilerlar va omborxona bo'limlari
-- Yakuniy logo va dizayn
+- Buyurtmalarni serverda saqlash (bir nechta xodim bir vaqtda ishlashi uchun)
+- Tsexdan yuklar, dilerlar va omborxona bo'limlari
+- Haqiqiy filiallar va mahsulotlar ro'yxati

@@ -43,7 +43,10 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
     expect(find.text("Ismingiz"), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'Murod');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Ismingiz'), 'Murod');
+    await tester.enterText(
+        find.widgetWithText(TextField, "Do'kon yoki brend nomi"), 'Jalyuzi Uz');
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, "Ro'yxatdan o'tish"));
     await tester.pump();
@@ -60,5 +63,6 @@ void main() {
     expect(state.isLoggedIn, isTrue);
     expect(state.phone, '+998901234567');
     expect(state.name, 'Murod');
+    expect(state.shopName, 'Jalyuzi Uz');
   });
 }

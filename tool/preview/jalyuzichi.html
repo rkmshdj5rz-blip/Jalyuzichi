@@ -1,0 +1,173 @@
+<title>Jalyuzichi ilovasi</title>
+<style>
+  :root { --bg: #f3f4f7; --ink: #14161c; --muted: #6b6d7a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #111117; --ink: #f2f2f5; --muted: #a9a9b6; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #111117; --ink: #f2f2f5; --muted: #a9a9b6; color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); overflow: hidden; }
+  /* Ilova shu oyna ichida ishlaydi. Telefonda tepadagi soat va sarlavha
+     paneli ilovani yopmasligi uchun joy qoldiramiz. */
+  #app, #splash { position: fixed; left: 0; right: 0; bottom: 0; top: 0; }
+  @media (max-width: 700px) and (pointer: coarse) {
+    #app, #splash { top: calc(env(safe-area-inset-top, 0px) + 112px); }
+  }
+  #splash { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--muted); }
+  #splash .logo { width: 64px; height: 64px; border-radius: 18px; background: #c8f31d; display: grid; place-items: center; }
+  #splash .logo svg { width: 38px; height: 38px; }
+  #splash .bar { width: 120px; height: 4px; border-radius: 4px; background: rgba(127,127,140,.2); overflow: hidden; }
+  #splash .bar i { display: block; width: 40%; height: 100%; background: #c8f31d; animation: slide 1s ease-in-out infinite alternate; }
+  @keyframes slide { from { transform: translateX(-10%); } to { transform: translateX(160%); } }
+</style>
+<div id="app"></div>
+<div id="splash" aria-live="polite">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#14161c" stroke-width="2.4" stroke-linecap="round"><path d="M4 4h16M7 7l-1.5 13M11 7l-1.5 13M15 7l-1.5 13M19 7l-1.5 13"/></svg></div>
+  <div class="bar"><i></i></div>
+  <div id="splash-text">Ma'lumotlar yuklanmoqda…</div>
+</div>
+<script>
+/*
+ * Sinov oynasida brauzer xotirasi har ochilganda tozalanib ketishi mumkin.
+ * Shuning uchun ilova ma'lumotlari (ro'yxatdan o'tish, buyurtmalar, narxlar)
+ * har bir foydalanuvchining shaxsiy bulut xotirasida ham saqlanadi va
+ * ilova ochilganda o'sha yerdan qaytariladi.
+ */
+(function () {
+  var PREFIX = 'flutter.';
+  var CHUNK = 180000; // bitta hujjat 256 KB dan oshmasin
+  var mem = {};
+
+  // Brauzer xotirasi umuman yopiq bo'lsa, vaqtinchalik xotira beramiz.
+  var ls = null, usingShim = false;
+  try { ls = window.localStorage; ls.setItem('__jz', '1'); ls.removeItem('__jz'); } catch (e) { ls = null; }
+  if (!ls) {
+    var shim = {
+      getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+      setItem: function (k, v) { mem[k] = String(v); },
+      removeItem: function (k) { delete mem[k]; },
+      clear: function () { mem = {}; },
+      key: function (i) { return Object.keys(mem)[i] || null; },
+      get length() { return Object.keys(mem).length; }
+    };
+    try { Object.defineProperty(window, 'localStorage', { configurable: true, get: function () { return shim; } }); } catch (e) {}
+    ls = shim; usingShim = true;
+  }
+
+  function appKeys() {
+    var out = [];
+    for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (k && k.indexOf(PREFIX) === 0) out.push(k); }
+    return out;
+  }
+  function docId(key) { return 'k-' + key.replace(/[^A-Za-z0-9_\-.~:@+]/g, '_'); }
+
+  var store = null; // {col}
+  var dirty = {};
+  var timer = null;
+  var flushing = false;
+
+  function withTimeout(p, ms) {
+    return Promise.race([p, new Promise(function (r) { setTimeout(function () { r(null); }, ms); })]);
+  }
+
+  async function writeKey(key) {
+    var id = docId(key);
+    var v = ls.getItem(key);
+    if (v === null) {
+      var old = await store.col.doc(id).get();
+      var n = old.exists ? (old.data().n || 1) : 1;
+      await store.col.doc(id).delete();
+      for (var i = 1; i < n; i++) await store.col.doc(id + '~' + i).delete();
+      return;
+    }
+    var parts = [];
+    for (var j = 0; j < v.length; j += CHUNK) parts.push(v.slice(j, j + CHUNK));
+    if (!parts.length) parts.push('');
+    for (var c = 1; c < parts.length; c++) await store.col.doc(id + '~' + c).set({ v: parts[c] });
+    await store.col.doc(id).set({ key: key, v: parts[0], n: parts.length, at: Date.now() });
+  }
+
+  async function flush() {
+    if (!store || flushing) return;
+    flushing = true;
+    try {
+      while (Object.keys(dirty).length) {
+        var keys = Object.keys(dirty);
+        dirty = {};
+        for (var i = 0; i < keys.length; i++) {
+          try { await writeKey(keys[i]); }
+          catch (e) {
+            if (e && (e.code === 'unavailable' || e.code === 'resource_exhausted')) {
+              dirty[keys[i]] = 1;
+              await new Promise(function (r) { setTimeout(r, 1500 + Math.random() * 1500); });
+            } else if (e && (e.code === 'revoked' || e.code === 'not_granted')) {
+              store = null; return;
+            }
+          }
+        }
+      }
+    } finally { flushing = false; }
+  }
+  function schedule(key) {
+    dirty[key] = 1;
+    clearTimeout(timer);
+    timer = setTimeout(flush, 700);
+  }
+
+  // Ilova xotiraga yozganda bulutga ham yuboramiz.
+  var proto = Object.getPrototypeOf(ls);
+  var origSet = ls.setItem, origRemove = ls.removeItem;
+  function patch(target) {
+    target.setItem = function (k, v) {
+      var r = origSet.call(this, k, v);
+      if (this === ls && String(k).indexOf(PREFIX) === 0) schedule(String(k));
+      return r;
+    };
+    target.removeItem = function (k) {
+      var r = origRemove.call(this, k);
+      if (this === ls && String(k).indexOf(PREFIX) === 0) schedule(String(k));
+      return r;
+    };
+  }
+  patch(usingShim ? ls : proto);
+
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
+  window.addEventListener('pagehide', flush);
+
+  async function hydrate() {
+    for (var w = 0; w < 30 && !(window.claude && window.claude.use); w++) {
+      await new Promise(function (r) { setTimeout(r, 100); });
+    }
+    if (!window.claude || !window.claude.use) return;
+    var res = await withTimeout(Promise.all([window.claude.use('db'), window.claude.use('user')]), 8000);
+    if (!res || !res[0] || !res[1]) return;
+    var db = res[0], user = res[1];
+    var uid = await withTimeout(user.id(), 5000);
+    if (!uid) return;
+    var col = db.collection('data/users/' + uid);
+    var snap;
+    try { snap = await col.limit(1000).get(); } catch (e) { return; }
+    var byId = {};
+    snap.docs.forEach(function (d) { byId[d.id] = d.data(); });
+    var heads = snap.docs.filter(function (d) { return d.id.indexOf('~') < 0 && d.data().key; });
+    origSet.call(ls, '__jz_sync', '1');
+    if (heads.length) {
+      // Bulutdagi nusxa asosiy: brauzerdagini shu bilan almashtiramiz.
+      appKeys().forEach(function (k) { origRemove.call(ls, k); });
+      heads.forEach(function (d) {
+        var b = d.data(), v = b.v || '';
+        for (var i = 1; i < (b.n || 1); i++) { var part = byId[d.id + '~' + i]; v += part ? part.v : ''; }
+        origSet.call(ls, b.key, v);
+      });
+      store = { col: col };
+    } else {
+      // Birinchi marta: shu qurilmadagi ma'lumotni bulutga ko'chiramiz.
+      store = { col: col };
+      appKeys().forEach(function (k) { dirty[k] = 1; });
+      flush();
+    }
+  }
+
+  window.__jzReady = withTimeout(hydrate().catch(function () {}), 12000);
+})();
+</script>
+<script src="flutter_bootstrap.js" async></script>
